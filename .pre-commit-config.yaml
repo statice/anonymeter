@@ -1,0 +1,41 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.3.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: ['--fix', 'lf']
+  - repo: https://github.com/jumanjihouse/pre-commit-hooks
+    rev: 2.1.0
+    hooks:
+      - id: git-check
+  - repo: local
+    hooks:
+      - id: yapf
+        name: yapf
+        language: system
+        entry: yapf
+        args: ['-i', '--style=pep8']
+        types: [python]
+
+      - id: isort
+        name: isort
+        language: system
+        entry: isort
+        types: [python]
+
+      - id: flake8
+        name: flake8
+        language: system
+        entry: flake8
+        args: ['--config', 'setup.cfg', '--exclude', 'test*.py']
+        types: [python]
+
+      - id: mypy
+        name: mypy
+        language: system
+        entry: mypy
+        args: ['--config-file=setup.cfg', '.']
+        pass_filenames: false
+        types: [python]
