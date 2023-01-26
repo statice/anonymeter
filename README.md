@@ -6,24 +6,32 @@ with attack-based evaluations for the **Singling Out**, **Linkability**, and
 **Inference** risks, which are the three key indicators of factual anonymization
 according to the [Article 29 Working Party](https://ec.europa.eu/justice/article-29/documentation/opinion-recommendation/files/2014/wp216_en.pdf).
 
-A throughout description of the working of the framework and the attack
-algorithms can be found in the paper
+A simple explanation of how `Anonymeter` works is provided below. For more details, a throughout
+description of the working of the framework and the attack algorithms can be found in the paper
 [A Unified Framework for Quantifying Privacy Risk in Synthetic Data](https://arxiv.org/abs/2211.10459).
-This work has been accepted at the 23rd Privacy Enhancing
-Technologies Symposium ([PETS 2023](https://petsymposium.org/cfp23.php)).
+This work has been accepted at the 23rd Privacy Enhancing Technologies Symposium ([PETS 2023](https://petsymposium.org/cfp23.php)).
 
 
-## Usage
+In `Anonymeter` each privacy risk is derived from a privacy attacker whose task is to use the synthetic dataset to come up with a set of *guesses* of the form:
+- "there is only one person with attributes X, Y, and Z" (singling out)
+- "records A and B belong to the same person" (linkability)
+- "a person with attributes X and Y also have Z" (inference)
 
-### Downloading Code
+Each evaluation consists of running three different attacks:
+- the "main" privacy attack, in which the attacker uses the synthetic data to guess information on records in the original data.
+- the "control" privacy attack, in which the attacker uses the synthetic data to guess information on records in the control dataset.
+- the "baseline" attack, which models a naive attacker who ignores the synthetic data and guess randomly.
+
+Checking how many of these guesses are correct, the success rates of the different attacks are measured and used to derive an estimate of the privacy risk. In particular, the "control attack" is used to separate what the attacker learns from the *utility* of the synthetic data, and what is instead indication of privacy leaks. The "baseline attack" instead functions as a sanity check. The "main attack" attack should outperform random guessing in order for the results to be trusted.
+
+
+## Setup and installation
 
 Clone the Anonymeter repository:
 
 ```shell
 git clone git@github.com:statice/anonymeter.git
 ```
-
-### Installation
 
 Install  [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
 After installing Miniconda, create an environment. `Anonymeter` needs either python 3.8 or 3.9.
@@ -43,12 +51,34 @@ cd anonymeter  # if you are not there already
 pip install -e '.[build,dev]'
 ```
 
-### Getting started
+## Basic usage pattern
+
+For each of the three privacy risks anonymeter provide an `Evaluator` class. The high-level classes `SinglingOutEvaluator`, `LinkabilityEvaluator`, and `InferenceEvaluator` are the only thing that you need to import from `Anonymeter`.
+
+Despite the different nature of the privacy risks they evaluate, these classes have the same interface and are used in the same way. To instantiate the evaluator you have to provide three dataframes: the original dataset `ori` which has been used to generate the synthetic data, the synthetic data `syn`, and a `control` dataset containing original records which have not been used to generate the synthetic data.
+
+Another parameter common to all evaluators is the number of target records to attack (`n_attacks`). A higher number will reduce the statistical uncertainties on the results, at the expense of a longer computation time.
+
+```python
+evaluator = *Evaluator(ori: pd.DataFrame,
+                       syn: pd.DataFrame,
+                       control: pd.DataFrame,
+                       n_attacks: int)
+```
+
+Once instantiated the evaluation pipeline is executed when calling the `evaluate`, and the resulting estimate of the risk can be accessed using the `risk()` method.
+
+```python
+evaluator.evaluate()
+risk = evaluator.risk()
+```
+
+## Getting started
 
 Check out the example notebook in the `notebooks` folder to start playing around
 with `anonymeter`. To run this notebook you would need `jupyter`. This should
 be installed as part of the `dev` dependencies. If you haven't done so, please
-install jupyter with by executing:
+install jupyter by executing:
 
 ```shell
 pip install jupyter
@@ -56,6 +86,7 @@ pip install jupyter
 
 inside the `anonymeter` environment created for the installation.
 
+##
 
 
 ## Cite this work
