@@ -26,25 +26,37 @@ git clone git@github.com:statice/anonymeter.git
 ### Installation
 
 Install  [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
-After installing Miniconda, create an environment:
+After installing Miniconda, create an environment. `Anonymeter` needs either python 3.8 or 3.9.
+Here we will use the more recent version.
 
 ```shell
 conda create -n anonymeter python=3.9
 conda activate anonymeter
 ```
 
-Once you have this basic environment set up, you can install this package.
+Once you have this basic environment set up, you can install this package
+calling `pip install` from the `anonymeter` directory you have pulled from git.
 Use the `-e` option to install in editable mode.
 
 ```shell
-cd anonymeter
+cd anonymeter  # if you are not there already
 pip install -e '.[build,dev]'
 ```
 
 ### Getting started
 
 Check out the example notebook in the `notebooks` folder to start playing around
-with `anonymeter`.
+with `anonymeter`. To run this notebook you would need `jupyter`. This should
+be installed as part of the `dev` dependencies. If you haven't done so, please
+install jupyter with by executing:
+
+```shell
+pip install jupyter
+```
+
+inside the `anonymeter` environment created for the installation.
+
+
 
 ## Cite this work
 
