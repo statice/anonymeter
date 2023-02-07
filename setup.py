@@ -2,7 +2,7 @@
 # Copyright (c) 2022 Anonos IP LLC.
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 requirements = [
     'scikit-learn==1.1.1',
@@ -47,6 +47,6 @@ setup(
     install_requires=requirements,
     python_requires='<3.10, >3.7',
     classifiers=classifiers,
-    packages=['anonymeter'],
+    packages=find_packages(),
     extras_require=extras,
 )
