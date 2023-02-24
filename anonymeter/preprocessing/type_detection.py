@@ -21,12 +21,10 @@ def detect_col_types(df: pd.DataFrame) -> Dict[str, List[str]]:
         Values are lists of column names.
 
     """
-    num_cols: List[str] = list(df.select_dtypes('number').columns.values)
-    cat_cols: List[str] = [
-        cn for cn in df.columns.values if cn not in num_cols
-    ]
+    num_cols: List[str] = list(df.select_dtypes("number").columns.values)
+    cat_cols: List[str] = [cn for cn in df.columns.values if cn not in num_cols]
 
-    return {'num': sorted(num_cols), 'cat': sorted(cat_cols)}
+    return {"num": sorted(num_cols), "cat": sorted(cat_cols)}
 
 
 def detect_consistent_col_types(df1: pd.DataFrame, df2: pd.DataFrame):
@@ -50,7 +48,6 @@ def detect_consistent_col_types(df1: pd.DataFrame, df2: pd.DataFrame):
     ctypes1 = detect_col_types(df1)
 
     if ctypes1 != detect_col_types(df2):
-        raise RuntimeError(
-            "Input dataframes have different column names/types.")
+        raise RuntimeError("Input dataframes have different column names/types.")
 
     return ctypes1

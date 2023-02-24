@@ -7,13 +7,10 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_bool_dtype
-from pandas.api.types import is_categorical_dtype
-from pandas.api.types import is_numeric_dtype
+from pandas.api.types import is_bool_dtype, is_categorical_dtype, is_numeric_dtype
 from scipy.optimize import curve_fit
 
-from anonymeter.stats.confidence import EvaluationResults
-from anonymeter.stats.confidence import PrivacyRisk
+from anonymeter.stats.confidence import EvaluationResults, PrivacyRisk
 
 rng = np.random.default_rng()
 
@@ -36,41 +33,38 @@ def _query_expression(col: str, val: Any, dtype: np.dtype) -> str:
     return query
 
 
-def _query_from_record(record: pd.Series, dtypes: pd.Series,
-                       columns: List[str],
-                       medians: Optional[pd.Series]) -> str:
+def _query_from_record(record: pd.Series, dtypes: pd.Series, columns: List[str], medians: Optional[pd.Series]) -> str:
     """Construct a query from the attributes in a record."""
     query = []
 
     for col in columns:
 
         if pd.isna(record[col]):
-            item = '.isna()'
+            item = ".isna()"
         elif is_bool_dtype(dtypes[col]):
-            item = f'== {record[col]}'
+            item = f"== {record[col]}"
         elif is_numeric_dtype(dtypes[col]):
 
             if medians is None:
                 operator = rng.choice([">=", "<="])
             else:
                 if record[col] > medians[col]:
-                    operator = '>='
+                    operator = ">="
                 else:
-                    operator = '<='
-            item = f'{operator} {record[col]}'
+                    operator = "<="
+            item = f"{operator} {record[col]}"
 
-        elif is_categorical_dtype(dtypes[col]) and is_numeric_dtype(
-                dtypes[col].categories.dtype):
-            item = f'=={record[col]}'
+        elif is_categorical_dtype(dtypes[col]) and is_numeric_dtype(dtypes[col].categories.dtype):
+            item = f"=={record[col]}"
         else:
             if isinstance(record[col], str):
                 item = f"== '{_escape_quotes(record[col])}'"
             else:
                 item = f'== "{record[col]}"'
 
-        query.append(f'{col}{item}')
+        query.append(f"{col}{item}")
 
-    return ' & '.join(query)
+    return " & ".join(query)
 
 
 def _random_operator(data_type: str) -> str:
@@ -110,22 +104,15 @@ def _random_query(unique_values: Dict[str, List[Any]], cols: List[str]):
 
         query.append(expression)
 
-    return ' & '.join(query)
+    return " & ".join(query)
 
 
-def _random_queries(df: pd.DataFrame, n_queries: int,
-                    n_cols: int) -> List[str]:
+def _random_queries(df: pd.DataFrame, n_queries: int, n_cols: int) -> List[str]:
 
-    random_columns = [
-        rng.choice(df.columns, size=n_cols, replace=False).tolist()
-        for _ in range(n_queries)
-    ]
+    random_columns = [rng.choice(df.columns, size=n_cols, replace=False).tolist() for _ in range(n_queries)]
     unique_values = {col: df[col].unique() for col in df.columns}
 
-    queries: List[str] = [
-        _random_query(unique_values=unique_values, cols=cols)
-        for cols in random_columns
-    ]
+    queries: List[str] = [_random_query(unique_values=unique_values, cols=cols) for cols in random_columns]
 
     return queries
 
@@ -133,14 +120,13 @@ def _random_queries(df: pd.DataFrame, n_queries: int,
 def safe_query_counts(query: str, df: pd.DataFrame) -> Optional[int]:
     """Return number of elements satisfying a given query."""
     try:
-        return len(df.query(query, engine='python'))
+        return len(df.query(query, engine="python"))
     except Exception as ex:
         logging.debug(f"Query {query} failed with {ex}.")
         return None
 
 
-def singling_out_probability_integral(n: int, w_min: float,
-                                      w_max: float) -> float:
+def singling_out_probability_integral(n: int, w_min: float, w_max: float) -> float:
     """Integral of the singling out probability within a given range.
 
     The probability that a query singles out in a population of size
@@ -170,31 +156,26 @@ def singling_out_probability_integral(n: int, w_min: float,
 
     """
     if w_min < 0 or w_min > 1:
-        raise ValueError("Parameter `w_min` must be between 0 and 1. "
-                         f"Got {w_min} instead.")
+        raise ValueError(f"Parameter `w_min` must be between 0 and 1. Got {w_min} instead.")
 
     if w_max < w_min or w_max > 1:
-        raise ValueError("Parameter `w_max` must be greater than w_min "
-                         f"({w_min}) and smaller than 1. "
-                         f"Got {w_max} instead.")
+        raise ValueError(
+            f"Parameter `w_max` must be greater than w_min ({w_min}) and smaller than 1. Got {w_max} instead."
+        )
 
-    return ((n * w_min + 1) * (1 - w_min)**n - (n * w_max + 1) *
-            (1 - w_max)**n) / (n + 1)
+    return ((n * w_min + 1) * (1 - w_min) ** n - (n * w_max + 1) * (1 - w_max) ** n) / (n + 1)
 
 
-def _measure_queries_success(df: pd.DataFrame, queries: List[str],
-                             n_repeat: int,
-                             n_meas: int) -> Tuple[np.ndarray, np.ndarray]:
+def _measure_queries_success(
+    df: pd.DataFrame, queries: List[str], n_repeat: int, n_meas: int
+) -> Tuple[np.ndarray, np.ndarray]:
     sizes, successes = [], []
     min_rows = min(1000, len(df))
 
     for n_rows in np.linspace(min_rows, len(df), n_meas).astype(int):
 
         for _ in range(n_repeat):
-            successes.append(
-                len(
-                    _evaluate_queries(df=df.sample(n_rows, replace=False),
-                                      queries=queries)))
+            successes.append(len(_evaluate_queries(df=df.sample(n_rows, replace=False), queries=queries)))
             sizes.append(n_rows)
 
     return np.array(sizes), np.array(successes)
@@ -207,14 +188,9 @@ def _model(x, w_eff, norm):
 def _fit_model(sizes: np.ndarray, successes: np.ndarray) -> Callable:
     # initial guesses
     w_eff_guess = 1 / np.max(sizes)
-    norm_guess = 1 / singling_out_probability_integral(
-        n=np.max(sizes), w_min=0, w_max=w_eff_guess)
+    norm_guess = 1 / singling_out_probability_integral(n=np.max(sizes), w_min=0, w_max=w_eff_guess)
 
-    popt, _ = curve_fit(_model,
-                        xdata=sizes,
-                        ydata=successes,
-                        bounds=(0, (1, np.inf)),
-                        p0=(w_eff_guess, norm_guess))
+    popt, _ = curve_fit(_model, xdata=sizes, ydata=successes, bounds=(0, (1, np.inf)), p0=(w_eff_guess, norm_guess))
 
     return lambda x: _model(x, *popt)
 
@@ -236,10 +212,7 @@ def fit_correction_term(df: pd.DataFrame, queries: List[str]) -> Callable:
         depends on the size of the dataset.
 
     """
-    sizes, successes = _measure_queries_success(df=df,
-                                                queries=queries,
-                                                n_repeat=5,
-                                                n_meas=10)
+    sizes, successes = _measure_queries_success(df=df, queries=queries, n_repeat=5, n_meas=10)
     return _fit_model(sizes=sizes, successes=successes)
 
 
@@ -288,8 +261,7 @@ class UniqueSinglingOutQueries:
         return self._list
 
 
-def univariate_singling_out_queries(df: pd.DataFrame,
-                                    n_queries: int) -> List[str]:
+def univariate_singling_out_queries(df: pd.DataFrame, n_queries: int) -> List[str]:
     """Generate singling out queries from rare attributes.
 
     Parameters
@@ -316,18 +288,13 @@ def univariate_singling_out_queries(df: pd.DataFrame,
             values = df[col].dropna().sort_values()
 
             if len(values) > 0:
-                queries.extend([
-                    f"{col} <= {values.iloc[0]}", f"{col} >= {values.iloc[-1]}"
-                ])
+                queries.extend([f"{col} <= {values.iloc[0]}", f"{col} >= {values.iloc[-1]}"])
 
         counts = df[col].value_counts()
         rare_values = counts[counts == 1]
 
         if len(rare_values) > 0:
-            queries.extend([
-                _query_expression(col=col, val=val, dtype=df.dtypes[col])
-                for val in rare_values.index
-            ])
+            queries.extend([_query_expression(col=col, val=val, dtype=df.dtypes[col]) for val in rare_values.index])
 
     rng.shuffle(queries)
 
@@ -342,8 +309,7 @@ def univariate_singling_out_queries(df: pd.DataFrame,
     return so_queries.queries
 
 
-def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int,
-                                      n_cols: int) -> List[str]:
+def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int, n_cols: int) -> List[str]:
     """Generates singling out queries from a combination of attributes.
 
     Parameters
@@ -369,10 +335,7 @@ def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int,
         record = df.iloc[rng.integers(df.shape[0])]
         columns = rng.choice(df.columns, size=n_cols, replace=False).tolist()
 
-        query = _query_from_record(record=record,
-                                   dtypes=df.dtypes,
-                                   columns=columns,
-                                   medians=medians)
+        query = _query_from_record(record=record, dtypes=df.dtypes, columns=columns, medians=medians)
 
         so_queries.check_and_append(query=query, df=df)
 
@@ -380,38 +343,35 @@ def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int,
 
 
 def _evaluate_queries(df: pd.DataFrame, queries: List[str]) -> List[str]:
-    counts = np.array([safe_query_counts(query=q, df=df) for q in queries],
-                      dtype=float)
+    counts = np.array([safe_query_counts(query=q, df=df) for q in queries], dtype=float)
 
     if np.any(np.isnan(counts)) > 0:
         logging.warning(
             f"Found {np.sum(np.isnan(counts))} failed queries "
-            "out of {len(queries)}. Check DEBUG messages for more details.")
+            "out of {len(queries)}. Check DEBUG messages for more details."
+        )
 
     success = counts == 1
     return [q for iq, q in enumerate(queries) if success[iq]]
 
 
-def _generate_singling_out_queries(df: pd.DataFrame, mode: str, n_attacks: int,
-                                   n_cols: int) -> List[str]:
-    if mode == 'univariate':
+def _generate_singling_out_queries(df: pd.DataFrame, mode: str, n_attacks: int, n_cols: int) -> List[str]:
+    if mode == "univariate":
         queries = univariate_singling_out_queries(df=df, n_queries=n_attacks)
 
-    elif mode == 'multivariate':
-        queries = multivariate_singling_out_queries(df=df,
-                                                    n_queries=n_attacks,
-                                                    n_cols=n_cols)
+    elif mode == "multivariate":
+        queries = multivariate_singling_out_queries(df=df, n_queries=n_attacks, n_cols=n_cols)
 
     else:
-        raise RuntimeError("Parameter `mode` can be either `univariate` "
-                           f"or `multivariate`. Got {mode} instead.")
+        raise RuntimeError(f"Parameter `mode` can be either `univariate` or `multivariate`. Got {mode} instead.")
 
     if len(queries) < n_attacks:
         logging.warning(
             f"Attack `{mode}` could generate only {len(queries)} "
             f"singling out queries out of the requested {n_attacks}. "
             "This can probably lead to an underestimate of the "
-            "singling out risk.")
+            "singling out risk."
+        )
     return queries
 
 
@@ -449,12 +409,14 @@ class SinglingOutEvaluator:
         synthetic dataset. This is used to evaluate the excess privacy risk.
     """
 
-    def __init__(self,
-                 ori: pd.DataFrame,
-                 syn: pd.DataFrame,
-                 n_attacks: int = 500,
-                 n_cols: int = 3,
-                 control: Optional[pd.DataFrame] = None):
+    def __init__(
+        self,
+        ori: pd.DataFrame,
+        syn: pd.DataFrame,
+        n_attacks: int = 500,
+        n_cols: int = 3,
+        control: Optional[pd.DataFrame] = None,
+    ):
         self._ori = ori.drop_duplicates()
         self._syn = syn.drop_duplicates()
         self._n_attacks = n_attacks
@@ -482,7 +444,7 @@ class SinglingOutEvaluator:
         """
         return self._random_queries if baseline else self._queries
 
-    def evaluate(self, mode: str) -> 'SinglingOutEvaluator':
+    def evaluate(self, mode: str) -> "SinglingOutEvaluator":
         """Run the attack and evaluate the guesses on the original dataset.
 
         Parameters
@@ -497,38 +459,31 @@ class SinglingOutEvaluator:
             The evaluated singling out evaluator.
 
         """
-        n_cols = 1 if mode == 'univariate' else self._n_cols
+        n_cols = 1 if mode == "univariate" else self._n_cols
 
-        baseline_queries = _random_queries(df=self._syn,
-                                           n_queries=self._n_attacks,
-                                           n_cols=n_cols)
-        self._baseline_queries = _evaluate_queries(df=self._ori,
-                                                   queries=baseline_queries)
+        baseline_queries = _random_queries(df=self._syn, n_queries=self._n_attacks, n_cols=n_cols)
+        self._baseline_queries = _evaluate_queries(df=self._ori, queries=baseline_queries)
         self._n_baseline = len(self._baseline_queries)
 
-        queries = _generate_singling_out_queries(df=self._syn,
-                                                 n_attacks=self._n_attacks,
-                                                 n_cols=self._n_cols,
-                                                 mode=mode)
+        queries = _generate_singling_out_queries(
+            df=self._syn, n_attacks=self._n_attacks, n_cols=self._n_cols, mode=mode
+        )
         self._queries = _evaluate_queries(df=self._ori, queries=queries)
         self._n_success = len(self._queries)
 
         if self._control is None:
             self._n_control = None
         else:
-            self._n_control = len(
-                _evaluate_queries(df=self._control, queries=queries))
+            self._n_control = len(_evaluate_queries(df=self._control, queries=queries))
 
             # correct the number of success against the control set
             # to account for different dataset sizes.
             if len(self._control) != len(self._ori):
 
                 # fit the model to the data:
-                fitted_model = fit_correction_term(df=self._control,
-                                                   queries=queries)
+                fitted_model = fit_correction_term(df=self._control, queries=queries)
 
-                correction = fitted_model(len(self._ori)) / fitted_model(
-                    len(self._control))
+                correction = fitted_model(len(self._ori)) / fitted_model(len(self._control))
                 self._n_control *= correction
 
         self._evaluated = True
@@ -549,17 +504,17 @@ class SinglingOutEvaluator:
 
         """
         if not self._evaluated:
-            raise RuntimeError("The inference evaluator wasn't evaluated yet. "
-                               "Please, run `evaluate()` first.")
+            raise RuntimeError("The inference evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
 
-        return EvaluationResults(n_attacks=self._n_attacks,
-                                 n_success=self._n_success,
-                                 n_baseline=self._n_baseline,
-                                 n_control=self._n_control,
-                                 confidence_level=confidence_level)
+        return EvaluationResults(
+            n_attacks=self._n_attacks,
+            n_success=self._n_success,
+            n_baseline=self._n_baseline,
+            n_control=self._n_control,
+            confidence_level=confidence_level,
+        )
 
-    def risk(self, confidence_level: float = 0.95,
-             baseline: bool = False) -> PrivacyRisk:
+    def risk(self, confidence_level: float = 0.95, baseline: bool = False) -> PrivacyRisk:
         """Estimate the singling out risk.
 
         The risk is estimated comparing the number of successfull singling out

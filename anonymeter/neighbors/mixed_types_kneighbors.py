@@ -3,26 +3,20 @@
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Nearest neighbor search for mixed type data."""
 import logging
-from math import fabs
-from math import isnan
+from math import fabs, isnan
 from typing import Dict, List, Optional, Tuple, Union
 
-from joblib import delayed
-from joblib import Parallel
-from numba import float64
-from numba import int64
-from numba import jit
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
+from numba import float64, int64, jit
 
 from anonymeter.preprocessing.transformations import mixed_types_transform
-from anonymeter.preprocessing.type_detection import \
-    detect_consistent_col_types
+from anonymeter.preprocessing.type_detection import detect_consistent_col_types
 
 
 @jit(nopython=True, nogil=True)
-def gower_distance(r0: np.ndarray, r1: np.ndarray,
-                   cat_cols_index: np.ndarray) -> float64:
+def gower_distance(r0: np.ndarray, r1: np.ndarray, cat_cols_index: np.ndarray) -> float64:
     r"""Distance between two records inspired by the Gower distance [1].
 
     To handle mixed type data, the distance is specialized for numerical (continuous)
@@ -60,7 +54,7 @@ def gower_distance(r0: np.ndarray, r1: np.ndarray,
         distance between the records.
 
     """
-    dist = 0.
+    dist = 0.0
 
     for i in range(len(r0)):
 
@@ -72,7 +66,7 @@ def gower_distance(r0: np.ndarray, r1: np.ndarray,
                 dist += fabs(r0[i] - r1[i])
 
             else:
-                if (r0[i] != r1[i]):
+                if r0[i] != r1[i]:
                     dist += 1
     return dist
 
@@ -113,9 +107,7 @@ def _nearest_neighbors(queries, candidates, cat_cols_index, n_neighbors):
 
         for iy in range(candidates.shape[0]):
 
-            dist_ix[iy] = gower_distance(r0=queries[ix],
-                                         r1=candidates[iy],
-                                         cat_cols_index=cat_cols_index)
+            dist_ix[iy] = gower_distance(r0=queries[ix], r1=candidates[iy], cat_cols_index=cat_cols_index)
 
         close_match_idx = dist_ix.argsort()[:n_neighbors]
         idx[ix] = close_match_idx
@@ -153,9 +145,7 @@ class MixedTypeKNeighbors:
         self._n_neighbors = n_neighbors
         self._n_jobs = n_jobs
 
-    def fit(self,
-            candidates: pd.DataFrame,
-            ctypes: Optional[Dict[str, List[str]]] = None):
+    def fit(self, candidates: pd.DataFrame, ctypes: Optional[Dict[str, List[str]]] = None):
         """Prepare for nearest neighbor search.
 
         Parameters
@@ -173,11 +163,9 @@ class MixedTypeKNeighbors:
         self._ctypes = ctypes
         return self
 
-    def kneighbors(self,
-                   queries: pd.DataFrame,
-                   n_neighbors: Optional[int] = None,
-                   return_distance: bool = False
-                   ) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
+    def kneighbors(
+        self, queries: pd.DataFrame, n_neighbors: Optional[int] = None, return_distance: bool = False
+    ) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
         """Find the nearest neighbors for a set of query points.
 
         Note
@@ -218,26 +206,26 @@ class MixedTypeKNeighbors:
             n_neighbors = self._candidates.shape[0]
 
         if self._ctypes is None:
-            self._ctypes = detect_consistent_col_types(df1=self._candidates,
-                                                       df2=queries)
+            self._ctypes = detect_consistent_col_types(df1=self._candidates, df2=queries)
         candidates, queries = mixed_types_transform(
-            df1=self._candidates,
-            df2=queries,
-            num_cols=self._ctypes['num'],
-            cat_cols=self._ctypes['cat'])
+            df1=self._candidates, df2=queries, num_cols=self._ctypes["num"], cat_cols=self._ctypes["cat"]
+        )
 
-        cols = self._ctypes['num'] + self._ctypes['cat']
+        cols = self._ctypes["num"] + self._ctypes["cat"]
         queries = queries[cols].values
         candidates = candidates[cols].values
 
-        with Parallel(n_jobs=self._n_jobs, backend='threading') as executor:
+        with Parallel(n_jobs=self._n_jobs, backend="threading") as executor:
 
             res = executor(
                 delayed(_nearest_neighbors)(
-                    queries=queries[ii:ii + 1],
+                    queries=queries[ii : ii + 1],
                     candidates=candidates,
-                    cat_cols_index=len(self._ctypes['num']),
-                    n_neighbors=n_neighbors) for ii in range(queries.shape[0]))
+                    cat_cols_index=len(self._ctypes["num"]),
+                    n_neighbors=n_neighbors,
+                )
+                for ii in range(queries.shape[0])
+            )
 
             indexes, distances = zip(*res)
             indexes, distances = np.vstack(indexes), np.vstack(distances)

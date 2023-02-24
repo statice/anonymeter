@@ -1,0 +1,31 @@
+[flake8]
+
+# References:
+# https://flake8.readthedocs.io/en/latest/user/configuration.html
+# https://flake8.readthedocs.io/en/latest/user/error-codes.html
+
+ignore =
+        D100   # Missing docstring in public module
+        D107   # Missing docstring in __init__
+        D401   # First line should be in imperative mood
+
+# flake8-docstring adds D??? errors to flake8 output.
+# Those errors are disabled for the code listed below.
+# Format: one file (or files if placeholders used) per line,
+# then "colon" and finally the warnings (e.g. D404) or group of
+# warnings (e.g. D or D4) to ignore per file.
+per-file-ignores =
+        docs/*:D
+        setup.py:D
+        tests/*:D
+
+exclude =
+        .git,.vscode,env,.env,.venv,.pytest_cache,.mypy_cache, **/__init__.py,
+        build,dist,htmlcov,setup.py
+
+max-line-length = 120
+# black enforces an equal amount of whitespace around slice operators, we need to ignore flake8's rule
+# https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#configuration
+extend-ignore = E203
+
+max-complexity = 18

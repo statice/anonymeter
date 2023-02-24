@@ -7,21 +7,19 @@ from typing import List, Optional
 import numpy as np
 import pandas as pd
 
-from anonymeter.neighbors.mixed_types_kneighbors import \
-    MixedTypeKNeighbors
-from anonymeter.stats.confidence import EvaluationResults
-from anonymeter.stats.confidence import PrivacyRisk
+from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors
+from anonymeter.stats.confidence import EvaluationResults, PrivacyRisk
 
 
 def _run_attack(
-        target: pd.DataFrame,
-        syn: pd.DataFrame,
-        n_attacks: int,
-        aux_cols: List[str],
-        secret: str,
-        n_jobs: int,
-        naive: bool,
-        regression: Optional[bool],
+    target: pd.DataFrame,
+    syn: pd.DataFrame,
+    n_attacks: int,
+    aux_cols: List[str],
+    secret: str,
+    n_jobs: int,
+    naive: bool,
+    regression: Optional[bool],
 ) -> np.ndarray:
     if regression is None:
         regression = pd.api.types.is_numeric_dtype(target[secret])
@@ -32,21 +30,17 @@ def _run_attack(
         guesses = syn.sample(n_attacks)[secret]
 
     else:
-        nn = MixedTypeKNeighbors(n_jobs=n_jobs,
-                                 n_neighbors=1).fit(candidates=syn[aux_cols])
+        nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=1).fit(candidates=syn[aux_cols])
 
         guesses_idx = nn.kneighbors(queries=targets[aux_cols])
         guesses = syn.iloc[guesses_idx.flatten()][secret]
 
-    return evaluate_inference_guesses(guesses=guesses,
-                                      secrets=targets[secret],
-                                      regression=regression).sum()
+    return evaluate_inference_guesses(guesses=guesses, secrets=targets[secret], regression=regression).sum()
 
 
-def evaluate_inference_guesses(guesses: pd.Series,
-                               secrets: pd.Series,
-                               regression: bool,
-                               tolerance: float = 0.05) -> np.ndarray:
+def evaluate_inference_guesses(
+    guesses: pd.Series, secrets: pd.Series, regression: bool, tolerance: float = 0.05
+) -> np.ndarray:
     """Evaluate the success of an inference attack.
 
     The attack is successful if the attacker managed to make a correct guess.
@@ -147,14 +141,14 @@ class InferenceEvaluator:
     """
 
     def __init__(
-            self,
-            ori: pd.DataFrame,
-            syn: pd.DataFrame,
-            aux_cols: List[str],
-            secret: str,
-            regression: Optional[bool] = None,
-            n_attacks: int = 500,
-            control: Optional[pd.DataFrame] = None,
+        self,
+        ori: pd.DataFrame,
+        syn: pd.DataFrame,
+        aux_cols: List[str],
+        secret: str,
+        regression: Optional[bool] = None,
+        n_attacks: int = 500,
+        control: Optional[pd.DataFrame] = None,
     ):
         self._ori = ori
         self._syn = syn
@@ -165,18 +159,19 @@ class InferenceEvaluator:
         self._aux_cols = aux_cols
         self._evaluated = False
 
-    def _attack(self, target: pd.DataFrame, naive: bool,
-                n_jobs: int) -> np.ndarray:
-        return _run_attack(target=target,
-                           syn=self._syn,
-                           n_attacks=self._n_attacks,
-                           aux_cols=self._aux_cols,
-                           secret=self._secret,
-                           n_jobs=n_jobs,
-                           naive=naive,
-                           regression=self._regression)
+    def _attack(self, target: pd.DataFrame, naive: bool, n_jobs: int) -> np.ndarray:
+        return _run_attack(
+            target=target,
+            syn=self._syn,
+            n_attacks=self._n_attacks,
+            aux_cols=self._aux_cols,
+            secret=self._secret,
+            n_jobs=n_jobs,
+            naive=naive,
+            regression=self._regression,
+        )
 
-    def evaluate(self, n_jobs: int = -2) -> 'InferenceEvaluator':
+    def evaluate(self, n_jobs: int = -2) -> "InferenceEvaluator":
         r"""Run the inference attack.
 
         Parameters
@@ -190,14 +185,11 @@ class InferenceEvaluator:
             The evaluated ``InferenceEvaluator`` object.
 
         """
-        self._n_baseline = self._attack(target=self._ori,
-                                        naive=True,
-                                        n_jobs=n_jobs)
-        self._n_success = self._attack(target=self._ori,
-                                       naive=False,
-                                       n_jobs=n_jobs)
-        self._n_control = None if self._control is None else self._attack(
-            target=self._control, naive=False, n_jobs=n_jobs)
+        self._n_baseline = self._attack(target=self._ori, naive=True, n_jobs=n_jobs)
+        self._n_success = self._attack(target=self._ori, naive=False, n_jobs=n_jobs)
+        self._n_control = (
+            None if self._control is None else self._attack(target=self._control, naive=False, n_jobs=n_jobs)
+        )
 
         self._evaluated = True
         return self
@@ -217,17 +209,17 @@ class InferenceEvaluator:
 
         """
         if not self._evaluated:
-            raise RuntimeError("The inference evaluator wasn't evaluated yet. "
-                               "Please, run `evaluate()` first.")
+            raise RuntimeError("The inference evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
 
-        return EvaluationResults(n_attacks=self._n_attacks,
-                                 n_success=self._n_success,
-                                 n_baseline=self._n_baseline,
-                                 n_control=self._n_control,
-                                 confidence_level=confidence_level)
+        return EvaluationResults(
+            n_attacks=self._n_attacks,
+            n_success=self._n_success,
+            n_baseline=self._n_baseline,
+            n_control=self._n_control,
+            confidence_level=confidence_level,
+        )
 
-    def risk(self, confidence_level: float = 0.95,
-             baseline: bool = False) -> PrivacyRisk:
+    def risk(self, confidence_level: float = 0.95, baseline: bool = False) -> PrivacyRisk:
         """Compute the inference risk from the success of the attacker.
 
         This measures how much an attack on training data outperforms

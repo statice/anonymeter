@@ -3,9 +3,9 @@
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Functions for estimating rates and errors in privacy attacks."""
 
+import warnings
 from math import sqrt
 from typing import NamedTuple, Optional, Tuple
-import warnings
 
 from scipy.stats import norm
 
@@ -51,8 +51,7 @@ def probit(confidence_level: float) -> float:
     return norm.ppf(0.5 * (1.0 + confidence_level))
 
 
-def success_rate(n_total: int, n_success: int,
-                 confidence_level: float) -> SuccessRate:
+def success_rate(n_total: int, n_success: int, confidence_level: float) -> SuccessRate:
     """Estimate success rate in a Bernoulli-distributed sample.
 
     Attack scores follow a Bernoulli distribution (success/failure with rates p/1-p).
@@ -87,9 +86,7 @@ def success_rate(n_total: int, n_success: int,
 
     """
     if confidence_level > 1 or confidence_level < 0:
-        raise ValueError(
-            "Parameter `confidence_level` must be between 0 and 1. "
-            f"Got {confidence_level} instead.")
+        raise ValueError(f"Parameter `confidence_level` must be between 0 and 1. Got {confidence_level} instead.")
 
     z = probit(confidence_level)
 
@@ -103,8 +100,8 @@ def success_rate(n_total: int, n_success: int,
 
 
 def residual_success(
-        attack_rate: SuccessRate,
-        control_rate: SuccessRate,
+    attack_rate: SuccessRate,
+    control_rate: SuccessRate,
 ) -> SuccessRate:
     """Compute residual success in a privacy attack.
 
@@ -129,16 +126,14 @@ def residual_success(
         success rate.
 
     """
-    residual = (attack_rate.value - control_rate.value) / (1.0 -
-                                                           control_rate.value)
+    residual = (attack_rate.value - control_rate.value) / (1.0 - control_rate.value)
 
     # propagate the error using
     # dF = sqrt[ (dF/dx)^2 dx^2 + (dF/dy)^2 dy^2 + ... ]
     der_wrt_attack = 1 / abs(1 - control_rate.value)
-    der_wrt_control = (attack_rate.value - 1) / (1 - control_rate.value)**2
+    der_wrt_control = (attack_rate.value - 1) / (1 - control_rate.value) ** 2
 
-    error = sqrt((attack_rate.error * der_wrt_attack)**2 +
-                 (control_rate.error * der_wrt_control)**2)
+    error = sqrt((attack_rate.error * der_wrt_attack) ** 2 + (control_rate.error * der_wrt_control) ** 2)
 
     return SuccessRate(value=residual, error=error)
 
@@ -195,25 +190,22 @@ class EvaluationResults:
     """
 
     def __init__(
-            self,
-            n_attacks: int,
-            n_success: int,
-            n_baseline: int,
-            n_control: Optional[int] = None,
-            confidence_level: float = 0.95,
+        self,
+        n_attacks: int,
+        n_success: int,
+        n_baseline: int,
+        n_control: Optional[int] = None,
+        confidence_level: float = 0.95,
     ):
-        self.attack_rate = success_rate(n_total=n_attacks,
-                                        n_success=n_success,
-                                        confidence_level=confidence_level)
+        self.attack_rate = success_rate(n_total=n_attacks, n_success=n_success, confidence_level=confidence_level)
 
-        self.baseline_rate = success_rate(n_total=n_attacks,
-                                          n_success=n_baseline,
-                                          confidence_level=confidence_level)
+        self.baseline_rate = success_rate(n_total=n_attacks, n_success=n_baseline, confidence_level=confidence_level)
 
-        self.control_rate = None if n_control is None else success_rate(
-            n_total=n_attacks,
-            n_success=n_control,
-            confidence_level=confidence_level)
+        self.control_rate = (
+            None
+            if n_control is None
+            else success_rate(n_total=n_attacks, n_success=n_control, confidence_level=confidence_level)
+        )
 
         self.n_attacks = n_attacks
         self.n_success = n_success
@@ -228,11 +220,12 @@ class EvaluationResults:
                 "Attack is as good or worse as baseline model. "
                 f"Estimated rates: attack = {self.attack_rate.value}, "
                 f"baseline = {self.baseline_rate.value}. "
-                "Analysis results cannot be trusted.")
+                "Analysis results cannot be trusted.",
+                stacklevel=2,
+            )
 
         if self.control_rate is not None and self.control_rate.value == 1:
-            warnings.warn("Success of control attack is 100%. "
-                          "Cannot measure residual privacy risk.")
+            warnings.warn("Success of control attack is 100%. Cannot measure residual privacy risk.", stacklevel=2)
 
     def risk(self, baseline: bool = False) -> PrivacyRisk:
         """Estimate the privacy risk."""
@@ -242,5 +235,4 @@ class EvaluationResults:
         if self.control_rate is None:
             return self.attack_rate.to_risk()
         else:
-            return residual_success(attack_rate=self.attack_rate,
-                                    control_rate=self.control_rate).to_risk()
+            return residual_success(attack_rate=self.attack_rate, control_rate=self.control_rate).to_risk()
