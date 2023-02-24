@@ -4,9 +4,9 @@
 import numpy as np
 import pandas as pd
 import pytest
-from fixtures import get_adult
 
 from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors, gower_distance
+from tests.fixtures import get_adult
 
 rng = np.random.default_rng()
 

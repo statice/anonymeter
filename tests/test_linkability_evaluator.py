@@ -4,9 +4,9 @@
 import numpy as np
 import pandas as pd
 import pytest
-from fixtures import get_adult
 
 from anonymeter.evaluators.linkability_evaluator import LinkabilityEvaluator, LinkabilityIndexes
+from tests.fixtures import get_adult
 
 rng = np.random.default_rng(seed=42)
 

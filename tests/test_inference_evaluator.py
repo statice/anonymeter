@@ -4,9 +4,9 @@
 import numpy as np
 import pandas as pd
 import pytest
-from fixtures import get_adult
 
 from anonymeter.evaluators.inference_evaluator import InferenceEvaluator, evaluate_inference_guesses
+from tests.fixtures import get_adult
 
 
 @pytest.mark.parametrize(
