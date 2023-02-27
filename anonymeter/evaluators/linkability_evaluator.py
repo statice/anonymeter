@@ -8,10 +8,8 @@ from typing import Dict, List, Optional, Set, Tuple
 import numpy as np
 import pandas as pd
 
-from anonymeter.neighbors.mixed_types_kneighbors import \
-    MixedTypeKNeighbors
-from anonymeter.stats.confidence import EvaluationResults
-from anonymeter.stats.confidence import PrivacyRisk
+from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors
+from anonymeter.stats.confidence import EvaluationResults, PrivacyRisk
 
 
 class LinkabilityIndexes:
@@ -52,13 +50,11 @@ class LinkabilityIndexes:
 
         """
         if n_neighbors > self._idx_0.shape[0]:
-            logging.warning(f'Neighbors too large ({n_neighbors}, using '
-                            f'{self._idx_0.shape[0]}) instead.')
+            logging.warning(f"Neighbors too large ({n_neighbors}, using {self._idx_0.shape[0]}) instead.")
             n_neighbors = self._idx_0.shape[0]
 
         if n_neighbors < 1:
-            raise ValueError(
-                f'Invalid neighbors value ({n_neighbors}): must be positive.')
+            raise ValueError(f"Invalid neighbors value ({n_neighbors}): must be positive.")
 
         links = {}
         for ii, (row0, row1) in enumerate(zip(self._idx_0, self._idx_1)):
@@ -97,30 +93,20 @@ def _count_links(links: Dict[int, Set[int]]) -> int:
     return len(linkable)
 
 
-def _random_links(n_synthetic: int, n_attacks: int,
-                  n_neighbors: int) -> np.ndarray:
+def _random_links(n_synthetic: int, n_attacks: int, n_neighbors: int) -> np.ndarray:
     rng = np.random.default_rng()
 
-    return np.array([
-        rng.choice(n_synthetic, size=n_neighbors, replace=False)
-        for _ in range(n_attacks)
-    ])
+    return np.array([rng.choice(n_synthetic, size=n_neighbors, replace=False) for _ in range(n_attacks)])
 
 
-def _random_linkability_attack(n_synthetic: int, n_attacks: int,
-                               n_neighbors: int) -> LinkabilityIndexes:
-    idx_0 = _random_links(n_synthetic=n_synthetic,
-                          n_attacks=n_attacks,
-                          n_neighbors=n_neighbors)
-    idx_1 = _random_links(n_synthetic=n_synthetic,
-                          n_attacks=n_attacks,
-                          n_neighbors=n_neighbors)
+def _random_linkability_attack(n_synthetic: int, n_attacks: int, n_neighbors: int) -> LinkabilityIndexes:
+    idx_0 = _random_links(n_synthetic=n_synthetic, n_attacks=n_attacks, n_neighbors=n_neighbors)
+    idx_1 = _random_links(n_synthetic=n_synthetic, n_attacks=n_attacks, n_neighbors=n_neighbors)
 
     return LinkabilityIndexes(idx_0=idx_0, idx_1=idx_1)
 
 
-def _find_nn(syn: pd.DataFrame, ori: pd.DataFrame, n_jobs: int,
-             n_neighbors: int) -> np.ndarray:
+def _find_nn(syn: pd.DataFrame, ori: pd.DataFrame, n_jobs: int, n_neighbors: int) -> np.ndarray:
     nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=n_neighbors)
 
     if syn.ndim == 1:
@@ -134,19 +120,18 @@ def _find_nn(syn: pd.DataFrame, ori: pd.DataFrame, n_jobs: int,
     return nn.kneighbors(ori, return_distance=False)
 
 
-def _linkability_attack(ori: pd.DataFrame, syn: pd.DataFrame, n_attacks: int,
-                        aux_cols: Tuple[List[str], List[str]],
-                        n_neighbors: int, n_jobs: int) -> LinkabilityIndexes:
+def _linkability_attack(
+    ori: pd.DataFrame,
+    syn: pd.DataFrame,
+    n_attacks: int,
+    aux_cols: Tuple[List[str], List[str]],
+    n_neighbors: int,
+    n_jobs: int,
+) -> LinkabilityIndexes:
     targets = ori.sample(n_attacks, replace=False)
 
-    idx_0 = _find_nn(syn=syn[aux_cols[0]],
-                     ori=targets[aux_cols[0]],
-                     n_neighbors=n_neighbors,
-                     n_jobs=n_jobs)
-    idx_1 = _find_nn(syn=syn[aux_cols[1]],
-                     ori=targets[aux_cols[1]],
-                     n_neighbors=n_neighbors,
-                     n_jobs=n_jobs)
+    idx_0 = _find_nn(syn=syn[aux_cols[0]], ori=targets[aux_cols[0]], n_neighbors=n_neighbors, n_jobs=n_jobs)
+    idx_1 = _find_nn(syn=syn[aux_cols[1]], ori=targets[aux_cols[1]], n_neighbors=n_neighbors, n_jobs=n_jobs)
 
     return LinkabilityIndexes(idx_0=idx_0, idx_1=idx_1)
 
@@ -193,13 +178,15 @@ class LinkabilityEvaluator:
         synthetic dataset. This is used to evaluate the excess privacy risk.
     """
 
-    def __init__(self,
-                 ori: pd.DataFrame,
-                 syn: pd.DataFrame,
-                 aux_cols: Tuple[List[str], List[str]],
-                 n_attacks: Optional[int] = 500,
-                 n_neighbors: int = 1,
-                 control: Optional[pd.DataFrame] = None):
+    def __init__(
+        self,
+        ori: pd.DataFrame,
+        syn: pd.DataFrame,
+        aux_cols: Tuple[List[str], List[str]],
+        n_attacks: Optional[int] = 500,
+        n_neighbors: int = 1,
+        control: Optional[pd.DataFrame] = None,
+    ):
         self._ori = ori
         self._syn = syn
         self._n_attacks = n_attacks if n_attacks is not None else ori.shape[0]
@@ -208,7 +195,7 @@ class LinkabilityEvaluator:
         self._control = control
         self._evaluated = False
 
-    def evaluate(self, n_jobs: int = -2) -> 'LinkabilityEvaluator':
+    def evaluate(self, n_jobs: int = -2) -> "LinkabilityEvaluator":
         """Run the linkability attack.
 
         Parameters
@@ -223,31 +210,35 @@ class LinkabilityEvaluator:
 
         """
         self._baseline_links = _random_linkability_attack(
-            n_synthetic=self._syn.shape[0],
-            n_attacks=self._n_attacks,
-            n_neighbors=self._n_neighbors)
+            n_synthetic=self._syn.shape[0], n_attacks=self._n_attacks, n_neighbors=self._n_neighbors
+        )
 
-        self._attack_links = _linkability_attack(ori=self._ori,
-                                                 syn=self._syn,
-                                                 n_attacks=self._n_attacks,
-                                                 aux_cols=self._aux_cols,
-                                                 n_neighbors=self._n_neighbors,
-                                                 n_jobs=n_jobs)
-
-        self._control_links = None if self._control is None else _linkability_attack(
-            ori=self._control,
+        self._attack_links = _linkability_attack(
+            ori=self._ori,
             syn=self._syn,
             n_attacks=self._n_attacks,
             aux_cols=self._aux_cols,
             n_neighbors=self._n_neighbors,
-            n_jobs=n_jobs)
+            n_jobs=n_jobs,
+        )
+
+        self._control_links = (
+            None
+            if self._control is None
+            else _linkability_attack(
+                ori=self._control,
+                syn=self._syn,
+                n_attacks=self._n_attacks,
+                aux_cols=self._aux_cols,
+                n_neighbors=self._n_neighbors,
+                n_jobs=n_jobs,
+            )
+        )
 
         self._evaluated = True
         return self
 
-    def results(self,
-                confidence_level: float = 0.95,
-                n_neighbors: Optional[int] = None) -> EvaluationResults:
+    def results(self, confidence_level: float = 0.95, n_neighbors: Optional[int] = None) -> EvaluationResults:
         """Raw evaluation results.
 
         Parameters
@@ -267,8 +258,7 @@ class LinkabilityEvaluator:
 
         """
         if not self._evaluated:
-            raise RuntimeError("The inference evaluator wasn't evaluated yet. "
-                               "Please, run `evaluate()` first.")
+            raise RuntimeError("The inference evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
 
         if n_neighbors is None:
             n_neighbors = self._n_neighbors
@@ -280,21 +270,19 @@ class LinkabilityEvaluator:
                 f"({self._n_neighbors}. Using `n_neighbors == {self._n_neighbors}`"
             )
 
-        n_control = None if self._control_links is None else self._control_links.count_links(
-            n_neighbors=n_neighbors)
+        n_control = None if self._control_links is None else self._control_links.count_links(n_neighbors=n_neighbors)
 
         return EvaluationResults(
             n_attacks=self._n_attacks,
             n_success=self._attack_links.count_links(n_neighbors=n_neighbors),
-            n_baseline=self._baseline_links.count_links(
-                n_neighbors=n_neighbors),
+            n_baseline=self._baseline_links.count_links(n_neighbors=n_neighbors),
             n_control=n_control,
-            confidence_level=confidence_level)
+            confidence_level=confidence_level,
+        )
 
-    def risk(self,
-             confidence_level: float = 0.95,
-             baseline: bool = False,
-             n_neighbors: Optional[int] = None) -> PrivacyRisk:
+    def risk(
+        self, confidence_level: float = 0.95, baseline: bool = False, n_neighbors: Optional[int] = None
+    ) -> PrivacyRisk:
         """Compute linkability risk.
 
         The linkability risk reflects how easy linkability attacks are.
@@ -322,7 +310,6 @@ class LinkabilityEvaluator:
             Estimate of the linkability risk and its confidence interval.
 
         """
-        results = self.results(confidence_level=confidence_level,
-                               n_neighbors=n_neighbors)
+        results = self.results(confidence_level=confidence_level, n_neighbors=n_neighbors)
 
         return results.risk(baseline=baseline)

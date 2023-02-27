@@ -1,0 +1,52 @@
+[tool.isort]
+profile = "black"
+known_first_party = "anonymeter"
+line_length = 120
+skip = [
+    ".git",
+    ".vscode",
+    ".venv",
+    ".pytest_cache",
+    ".mypy_cache",
+    "__init__.py",
+    "build",
+    "dist",
+    "htmlcov",
+]
+
+[tool.black]
+line-length = 120
+multi-line-output = 3
+include-trailing-comma = true
+
+[tool.mypy]
+disallow_untyped_defs = false
+ignore_missing_imports = true
+follow_imports = "silent"
+show_column_numbers = true
+show_error_context = false
+exclude = [
+    "docs",
+    "tests",
+    "build",
+    "dist",
+    "htmlcov"
+]
+
+# Explicitly blacklist modules in use that don't have type stubs
+[mypy-pandas]
+ignore_missing_imports=true
+
+[mypy-numpy]
+ignore_missing_imports=true
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::UserWarning",
+    "ignore::FutureWarning",
+    "ignore::PendingDeprecationWarning"
+]
+testpaths = [
+    "tests"
+]
+xfail_strict=true

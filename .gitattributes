@@ -1,0 +1,5 @@
+*.py diff=python
+*.png binary
+*.jpg binary
+*.csv text -whitespace
+*.rst text

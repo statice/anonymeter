@@ -2,7 +2,6 @@
 # Copyright (c) 2022 Anonos IP LLC.
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Data pre-processing and transformations for the privacy evaluators."""
-
 import logging
 from typing import List, Tuple
 
@@ -11,20 +10,19 @@ from sklearn.preprocessing import LabelEncoder
 
 
 def _encode_categorical(
-        df1: pd.DataFrame,
-        df2: pd.DataFrame,
+    df1: pd.DataFrame,
+    df2: pd.DataFrame,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Encode dataframes with categorical values keeping label consistend."""
-    encoded = pd.concat((df1, df2), keys=['df1', 'df2'])
+    encoded = pd.concat((df1, df2), keys=["df1", "df2"])
 
     for col in encoded.columns:
         encoded[col] = LabelEncoder().fit_transform(encoded[col])
 
-    return encoded.loc['df1'], encoded.loc['df2']
+    return encoded.loc["df1"], encoded.loc["df2"]
 
 
-def _scale_numerical(df1: pd.DataFrame,
-                     df2: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def _scale_numerical(df1: pd.DataFrame, df2: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Scale dataframes with *only* numerical values."""
     df1_min, df1_max = df1.min(), df1.max()
     df2_min, df2_max = df2.min(), df2.max()
@@ -37,7 +35,8 @@ def _scale_numerical(df1: pd.DataFrame,
         cnames = ", ".join(ranges[ranges == 0].index.values)
         logging.debug(
             f"Numerical column(s) {cnames} have a null-range: all elements "
-            "have the same value. These column(s) won't be scaled.")
+            "have the same value. These column(s) won't be scaled."
+        )
         ranges[ranges == 0] = 1
 
     df1_scaled = df1.apply(lambda x: x / ranges[x.name])
@@ -46,9 +45,9 @@ def _scale_numerical(df1: pd.DataFrame,
     return df1_scaled, df2_scaled
 
 
-def mixed_types_transform(df1: pd.DataFrame, df2: pd.DataFrame,
-                          num_cols: List[str], cat_cols: List[str]
-                          ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def mixed_types_transform(
+    df1: pd.DataFrame, df2: pd.DataFrame, num_cols: List[str], cat_cols: List[str]
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Combination of an encoder and a scaler to treat mixed type data.
 
     Numerical columns are scaled by dividing them by their range across both
@@ -80,15 +79,15 @@ def mixed_types_transform(df1: pd.DataFrame, df2: pd.DataFrame,
 
     """
     if not set(df1.columns) == set(df2.columns):
-        raise ValueError("Input dataframes have different columns. "
-                         f"df1: {df1.columns}, "
-                         f"df2: {df2.columns}.")
+        raise ValueError(f"Input dataframes have different columns. df1: {df1.columns}, df2: {df2.columns}.")
 
     if not set(num_cols + cat_cols) == set(df1.columns):
-        raise ValueError(f"Dataframes columns {df1.columns} do not match "
-                         "with `num_cols` and `cat_cols`.\n"
-                         f"num_cols: {num_cols}\n"
-                         f"cat_cols: {cat_cols}")
+        raise ValueError(
+            f"Dataframes columns {df1.columns} do not match "
+            "with `num_cols` and `cat_cols`.\n"
+            f"num_cols: {num_cols}\n"
+            f"cat_cols: {cat_cols}"
+        )
 
     df1_num, df2_num = pd.DataFrame(), pd.DataFrame()
     if len(num_cols) > 0:
