@@ -44,11 +44,10 @@ conda activate anonymeter
 
 Once you have this basic environment set up, you can install this package
 calling `pip install` from the `anonymeter` directory you have pulled from git.
-Use the `-e` option to install in editable mode.
 
 ```shell
 cd anonymeter  # if you are not there already
-pip install -e '.[build,dev]'
+pip install .
 ```
 
 ## Basic usage pattern
