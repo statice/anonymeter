@@ -348,7 +348,7 @@ def _evaluate_queries(df: pd.DataFrame, queries: List[str]) -> List[str]:
     if np.any(np.isnan(counts)) > 0:
         logging.warning(
             f"Found {np.sum(np.isnan(counts))} failed queries "
-            "out of {len(queries)}. Check DEBUG messages for more details."
+            f"out of {len(queries)}. Check DEBUG messages for more details."
         )
 
     success = counts == 1
@@ -504,7 +504,7 @@ class SinglingOutEvaluator:
 
         """
         if not self._evaluated:
-            raise RuntimeError("The inference evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
+            raise RuntimeError("The singling out evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
 
         return EvaluationResults(
             n_attacks=self._n_attacks,
