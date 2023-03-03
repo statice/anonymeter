@@ -3,7 +3,7 @@
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Privacy evaluator that measures the linkability risk."""
 import logging
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, cast
 
 import numpy as np
 import pandas as pd
@@ -117,7 +117,7 @@ def _find_nn(syn: pd.DataFrame, ori: pd.DataFrame, n_jobs: int, n_neighbors: int
 
     nn.fit(syn)
 
-    return nn.kneighbors(ori, return_distance=False)
+    return cast(np.ndarray, nn.kneighbors(ori, return_distance=False))
 
 
 def _linkability_attack(
@@ -258,7 +258,7 @@ class LinkabilityEvaluator:
 
         """
         if not self._evaluated:
-            raise RuntimeError("The inference evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
+            raise RuntimeError("The linkability evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
 
         if n_neighbors is None:
             n_neighbors = self._n_neighbors
