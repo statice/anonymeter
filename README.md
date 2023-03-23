@@ -94,15 +94,15 @@ If you use anonymeter in your work, we would appreciate citations to the followi
 
 "A Unified Framework for Quantifying Privacy Risk in Synthetic Data", M. Giomi *et al*, PoPETS 2023.
 
-This `bibtex` entry can be used to refer to the arxiv preprint:
+This `bibtex` entry can be used to refer to the paper:
 
 ```text
-@misc{https://doi.org/10.48550/arxiv.2211.10459,
-  doi = {10.48550/ARXIV.2211.10459},
-  url = {https://arxiv.org/abs/2211.10459},
+@misc{anonymeter,
+  doi = {https://doi.org/10.56553/popets-2023-0055},
+  url = {https://petsymposium.org/popets/2023/popets-2023-0055.php},
+  journal = {Proceedings of Privacy Enhancing Technologies Symposium},
+  year = {2023},
   author = {Giomi, Matteo and Boenisch, Franziska and Wehmeyer, Christoph and Tasnádi, Borbála},
   title = {A Unified Framework for Quantifying Privacy Risk in Synthetic Data},
-  publisher = {arXiv},
-  year = {2022}
 }
 ```
