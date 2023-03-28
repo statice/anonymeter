@@ -107,9 +107,13 @@ def _random_query(unique_values: Dict[str, List[Any]], cols: List[str]):
     return " & ".join(query)
 
 
-def _random_queries(df: pd.DataFrame, n_queries: int, n_cols: int) -> List[str]:
-
-    random_columns = [rng.choice(df.columns, size=n_cols, replace=False).tolist() for _ in range(n_queries)]
+def _random_queries(df: pd.DataFrame, n_queries: int, n_cols: int, q_columns: List[str]) -> List[str]:
+    if q_columns is None:
+        q_columns = df.columns
+    if len(q_columns) > n_cols:
+        random_columns = [rng.choice(q_columns, size=n_cols, replace=False).tolist() for _ in range(n_queries)]
+    else:
+        random_columns = [list(q_columns) for _ in range(n_queries)]
     unique_values = {col: df[col].unique() for col in df.columns}
 
     queries: List[str] = [_random_query(unique_values=unique_values, cols=cols) for cols in random_columns]
@@ -261,7 +265,7 @@ class UniqueSinglingOutQueries:
         return self._list
 
 
-def univariate_singling_out_queries(df: pd.DataFrame, n_queries: int) -> List[str]:
+def univariate_singling_out_queries(df: pd.DataFrame, n_queries: int, q_columns: List[str]) -> List[str]:
     """Generate singling out queries from rare attributes.
 
     Parameters
@@ -270,6 +274,8 @@ def univariate_singling_out_queries(df: pd.DataFrame, n_queries: int) -> List[st
             Input dataframe from which queries will be generated.
     n_queries: int
         Number of queries to generate.
+    q_columns: List[str]
+        list of columns from which we will create the queries. If None - use all data columns
 
     Returns
     -------
@@ -279,7 +285,10 @@ def univariate_singling_out_queries(df: pd.DataFrame, n_queries: int) -> List[st
     """
     queries = []
 
-    for col in df.columns:
+    if q_columns is None:
+        q_columns = df.columns
+
+    for col in q_columns:
 
         if df[col].isna().sum() == 1:
             queries.append(f"{col}.isna()")
@@ -309,7 +318,7 @@ def univariate_singling_out_queries(df: pd.DataFrame, n_queries: int) -> List[st
     return so_queries.queries
 
 
-def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int, n_cols: int) -> List[str]:
+def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int, n_cols: int, q_columns: List[str]) -> List[str]:
     """Generates singling out queries from a combination of attributes.
 
     Parameters
@@ -321,6 +330,8 @@ def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int, n_cols: 
     n_cols: float
         Number of columns that the attacker uses to create the
         singling out queries.
+    q_columns: List[str]
+        list of columns from which we will create the queries. If None - use all data columns
 
     Returns
     -------
@@ -331,9 +342,15 @@ def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int, n_cols: 
     so_queries = UniqueSinglingOutQueries()
     medians = df.median(numeric_only=True)
 
+    if q_columns is None:
+        q_columns = df.columns
+
     while len(so_queries) < n_queries:
         record = df.iloc[rng.integers(df.shape[0])]
-        columns = rng.choice(df.columns, size=n_cols, replace=False).tolist()
+        if len(q_columns) > n_cols:
+            columns = rng.choice(q_columns, size=n_cols, replace=False).tolist()
+        else:
+            columns = list(q_columns)
 
         query = _query_from_record(record=record, dtypes=df.dtypes, columns=columns, medians=medians)
 
@@ -355,12 +372,13 @@ def _evaluate_queries(df: pd.DataFrame, queries: List[str]) -> List[str]:
     return [q for iq, q in enumerate(queries) if success[iq]]
 
 
-def _generate_singling_out_queries(df: pd.DataFrame, mode: str, n_attacks: int, n_cols: int) -> List[str]:
+def _generate_singling_out_queries(df: pd.DataFrame, mode: str, n_attacks: int, n_cols: int,
+                                   q_columns: List[str]) -> List[str]:
     if mode == "univariate":
-        queries = univariate_singling_out_queries(df=df, n_queries=n_attacks)
+        queries = univariate_singling_out_queries(df=df, n_queries=n_attacks, q_columns=q_columns)
 
     elif mode == "multivariate":
-        queries = multivariate_singling_out_queries(df=df, n_queries=n_attacks, n_cols=n_cols)
+        queries = multivariate_singling_out_queries(df=df, n_queries=n_attacks, n_cols=n_cols, q_columns=q_columns)
 
     else:
         raise RuntimeError(f"Parameter `mode` can be either `univariate` or `multivariate`. Got {mode} instead.")
@@ -416,15 +434,18 @@ class SinglingOutEvaluator:
         n_attacks: int = 500,
         n_cols: int = 3,
         control: Optional[pd.DataFrame] = None,
+        q_columns: Optional[List[str]] = None,
     ):
         self._ori = ori.drop_duplicates()
         self._syn = syn.drop_duplicates()
         self._n_attacks = n_attacks
         self._n_cols = n_cols
         self._control = None if control is None else control.drop_duplicates()
+        self._q_columns = q_columns
         self._queries: List[str] = []
         self._random_queries: List[str] = []
         self._evaluated = False
+        self._feasible_n_attacks = 0
 
     def queries(self, baseline: bool = False) -> List[str]:
         """Successful singling out queries.
@@ -460,14 +481,18 @@ class SinglingOutEvaluator:
 
         """
         n_cols = 1 if mode == "univariate" else self._n_cols
+        if self._q_columns is not None and n_cols > len(self._q_columns):
+            raise ValueError(f'Cannot Singling Out attack with n_cols greater than q_columns list length')
 
-        baseline_queries = _random_queries(df=self._syn, n_queries=self._n_attacks, n_cols=n_cols)
+        baseline_queries = _random_queries(df=self._syn, n_queries=self._n_attacks, n_cols=n_cols,
+                                           q_columns=self._q_columns)
         self._baseline_queries = _evaluate_queries(df=self._ori, queries=baseline_queries)
         self._n_baseline = len(self._baseline_queries)
 
         queries = _generate_singling_out_queries(
-            df=self._syn, n_attacks=self._n_attacks, n_cols=self._n_cols, mode=mode
+            df=self._syn, n_attacks=self._n_attacks, n_cols=self._n_cols, mode=mode, q_columns=self._q_columns
         )
+        self._feasible_n_attacks = len(queries)
         self._queries = _evaluate_queries(df=self._ori, queries=queries)
         self._n_success = len(self._queries)
 
@@ -507,7 +532,7 @@ class SinglingOutEvaluator:
             raise RuntimeError("The singling out evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
 
         return EvaluationResults(
-            n_attacks=self._n_attacks,
+            n_attacks=self._feasible_n_attacks,
             n_success=self._n_success,
             n_baseline=self._n_baseline,
             n_control=self._n_control,
