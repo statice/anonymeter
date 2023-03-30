@@ -31,7 +31,6 @@ dependencies = [
     "python-stdnum==1.11",
     "regex==2022.6.2",
     "matplotlib==3.5.2",
-    "seaborn==0.11.2",
 ]
 
 [project.optional-dependencies]
