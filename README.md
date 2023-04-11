@@ -27,27 +27,21 @@ Checking how many of these guesses are correct, the success rates of the differe
 
 ## Setup and installation
 
+Anonymeter requires Python 3.8.x, 3.9.x or 3.10.x (this limitation is due to Numba usage).
+
 Clone the Anonymeter repository:
 
 ```shell
 git clone git@github.com:statice/anonymeter.git
 ```
 
-Install  [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
-After installing Miniconda, create an environment. `Anonymeter` needs either python 3.8 or 3.9.
-Here we will use the more recent version.
-
-```shell
-conda create -n anonymeter python=3.9
-conda activate anonymeter
-```
-
-Once you have this basic environment set up, you can install this package
-calling `pip install` from the `anonymeter` directory you have pulled from git.
+Install the dependencies:
 
 ```shell
 cd anonymeter  # if you are not there already
-pip install .
+pip install . # Basic dependencies
+pip install ".[notebooks]" # Dependencies to run example notebooks
+pip install -e ".[notebooks,dev]" # Development setup
 ```
 
 ## Basic usage pattern
@@ -75,18 +69,13 @@ risk = evaluator.risk()
 ## Getting started
 
 Check out the example notebook in the `notebooks` folder to start playing around
-with `anonymeter`. To run this notebook you would need `jupyter`. This should
-be installed as part of the `dev` dependencies. If you haven't done so, please
-install jupyter by executing:
+with `anonymeter`. To run this notebook you would need `jupyter` and some plotting libraries.
+This should be installed as part of the `notebooks` dependencies. If you haven't done so, please
+install them by executing:
 
 ```shell
-pip install jupyter
+pip install ".[notebooks]"
 ```
-
-inside the `anonymeter` environment created for the installation.
-
-##
-
 
 ## Cite this work
 
