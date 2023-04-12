@@ -12,7 +12,8 @@ description of the working of the framework and the attack algorithms can be fou
 This work has been accepted at the 23rd Privacy Enhancing Technologies Symposium ([PETS 2023](https://petsymposium.org/cfp23.php)).
 
 
-In `Anonymeter` each privacy risk is derived from a privacy attacker whose task is to use the synthetic dataset to come up with a set of *guesses* of the form:
+In `Anonymeter` each privacy risk is derived from a privacy attacker whose task is to use the synthetic dataset
+to come up with a set of *guesses* of the form:
 - "there is only one person with attributes X, Y, and Z" (singling out)
 - "records A and B belong to the same person" (linkability)
 - "a person with attributes X and Y also have Z" (inference)
@@ -22,10 +23,16 @@ Each evaluation consists of running three different attacks:
 - the "control" privacy attack, in which the attacker uses the synthetic data to guess information on records in the control dataset.
 - the "baseline" attack, which models a naive attacker who ignores the synthetic data and guess randomly.
 
-Checking how many of these guesses are correct, the success rates of the different attacks are measured and used to derive an estimate of the privacy risk. In particular, the "control attack" is used to separate what the attacker learns from the *utility* of the synthetic data, and what is instead indication of privacy leaks. The "baseline attack" instead functions as a sanity check. The "main attack" attack should outperform random guessing in order for the results to be trusted.
+Checking how many of these guesses are correct, the success rates of the different attacks are measured and used to
+derive an estimate of the privacy risk. In particular, the "control attack" is used to separate what the attacker
+learns from the *utility* of the synthetic data, and what is instead indication of privacy leaks.
+The "baseline attack" instead functions as a sanity check. The "main attack" attack should outperform random
+guessing in order for the results to be trusted.
 
 
 ## Setup and installation
+
+Anonymeter requires Python 3.8.x, 3.9.x or 3.10.x installed.
 
 Clone the Anonymeter repository:
 
@@ -33,22 +40,29 @@ Clone the Anonymeter repository:
 git clone git@github.com:statice/anonymeter.git
 ```
 
-Install  [Miniconda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html).
-After installing Miniconda, create an environment. `Anonymeter` needs either python 3.8 or 3.9.
-Here we will use the more recent version.
-
-```shell
-conda create -n anonymeter python=3.9
-conda activate anonymeter
-```
-
-Once you have this basic environment set up, you can install this package
-calling `pip install` from the `anonymeter` directory you have pulled from git.
+Install the dependencies:
 
 ```shell
 cd anonymeter  # if you are not there already
-pip install .
+pip install . # Basic dependencies
+pip install ".[notebooks]" # Dependencies to run example notebooks
+pip install -e ".[notebooks,dev]" # Development setup
 ```
+
+If you experience issues with the installation, we recommend to install
+`anonymeter` in a new clean virtual environment.
+
+## Getting started
+
+Check out the example notebook in the `notebooks` folder to start playing around
+with `anonymeter`. To run this notebook you would need `jupyter` and some plotting libraries.
+This should be installed as part of the `notebooks` dependencies. If you haven't done so, please
+install them by executing:
+
+```shell
+pip install ".[notebooks]"
+```
+
 
 ## Basic usage pattern
 
@@ -71,22 +85,6 @@ Once instantiated the evaluation pipeline is executed when calling the `evaluate
 evaluator.evaluate()
 risk = evaluator.risk()
 ```
-
-## Getting started
-
-Check out the example notebook in the `notebooks` folder to start playing around
-with `anonymeter`. To run this notebook you would need `jupyter`. This should
-be installed as part of the `dev` dependencies. If you haven't done so, please
-install jupyter by executing:
-
-```shell
-pip install jupyter
-```
-
-inside the `anonymeter` environment created for the installation.
-
-##
-
 
 ## Cite this work
 
