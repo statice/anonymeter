@@ -34,6 +34,15 @@ guessing in order for the results to be trusted.
 
 Anonymeter requires Python 3.8.x, 3.9.x or 3.10.x installed.
 
+### From PyPi
+
+Run:
+```
+pip install anonymeter
+```
+
+### Locally
+
 Clone the Anonymeter repository:
 
 ```shell
@@ -60,7 +69,11 @@ This should be installed as part of the `notebooks` dependencies. If you haven't
 install them by executing:
 
 ```shell
-pip install ".[notebooks]"
+pip install ".[notebooks]" # for local installation
+
+# or
+
+pip install anonymeter[notebooks] # for PyPi installation
 ```
 
 
