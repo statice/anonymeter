@@ -37,18 +37,27 @@ notebooks = [
 ]
 
 dev = [
+    # Linting and code checks
     "flake8~=5.0",
     "flake8-docstrings~=1.6.0",
     "flake8-eradicate~=1.4.0",
     "flake8-broken-line~=0.5",
     "flake8-bugbear~=23.2",
-    "isort~=5.10",
-    "black~=22.10",
     "pre-commit==2.20.0",
-    "pytest==7.1.2",
-    "pytest-cov==3.0.0",
     "mypy==0.961",
     "pytest-mypy==0.9.1",
+
+    # Code formatting
+    "isort~=5.10",
+    "black~=22.10",
+
+    # Testing
+    "pytest==7.1.2",
+    "pytest-cov==3.0.0",
+
+    # Building and packaging
+    "build~=0.10",
+    "twine~=4.0",
 ]
 
 [project.urls]
