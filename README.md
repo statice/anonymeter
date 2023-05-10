@@ -6,11 +6,11 @@ with attack-based evaluations for the **Singling Out**, **Linkability**, and
 **Inference** risks, which are the three key indicators of factual anonymization
 according to the [Article 29 Working Party](https://ec.europa.eu/justice/article-29/documentation/opinion-recommendation/files/2014/wp216_en.pdf).
 
-A simple explanation of how `Anonymeter` works is provided below. For more details, a throughout
-description of the working of the framework and the attack algorithms can be found in the paper
-[A Unified Framework for Quantifying Privacy Risk in Synthetic Data](https://arxiv.org/abs/2211.10459).
-This work has been accepted at the 23rd Privacy Enhancing Technologies Symposium ([PETS 2023](https://petsymposium.org/cfp23.php)).
 
+> Anonymeter has been positively reviewed by the technical experts from the [Commission Nationale de l’Informatique et des Libertés (CNIL)](https://www.cnil.fr/en/home) which, in their words, _“have not identified any reason suggesting that the proposed set of methods could not allow to effectively evaluate the extent to which the aforementioned three criteria are fulfilled or not in the context of production and use of synthetic datasets”_. The CNIL also expressed the opinion that the results of Anonymeter (i.e. the three risk scores) **should be used by the data controller to decide whether the residual risks of re-identification are acceptable or not, and whether the dataset could be considered anonymous**.
+
+
+## `Anonymeter` in a nutshel
 
 In `Anonymeter` each privacy risk is derived from a privacy attacker whose task is to use the synthetic dataset
 to come up with a set of *guesses* of the form:
@@ -29,27 +29,30 @@ learns from the *utility* of the synthetic data, and what is instead indication 
 The "baseline attack" instead functions as a sanity check. The "main attack" attack should outperform random
 guessing in order for the results to be trusted.
 
+For more details, a throughout
+description of the framework and the attack algorithms can be found in the paper
+[A Unified Framework for Quantifying Privacy Risk in Synthetic Data](https://petsymposium.org/popets/2023/popets-2023-0055.php), accepted at the 23rd Privacy Enhancing Technologies Symposium ([PETS 2023](https://petsymposium.org/cfp23.php)).
+
 
 ## Setup and installation
 
-Anonymeter requires Python 3.8.x, 3.9.x or 3.10.x installed.
+`Anonymeter` requires Python 3.8.x, 3.9.x or 3.10.x installed. The simplest way to install `Anonymeter` is from `PyPi`. Simply run
 
-### From PyPi
-
-Run:
 ```
 pip install anonymeter
 ```
 
-### Locally
+and you are good to go.
 
-Clone the Anonymeter repository:
+### Local installation
+
+To install `Anonymeter` locally, clone the repository:
 
 ```shell
 git clone git@github.com:statice/anonymeter.git
 ```
 
-Install the dependencies:
+and install the dependencies:
 
 ```shell
 cd anonymeter  # if you are not there already
@@ -69,13 +72,15 @@ This should be installed as part of the `notebooks` dependencies. If you haven't
 install them by executing:
 
 ```shell
-pip install ".[notebooks]" # for local installation
+pip install anonymeter[notebooks]
+```
+if you are installing anonymeter from `PyPi`, or:
 
-# or
-
-pip install anonymeter[notebooks] # for PyPi installation
+```shell
+pip install ".[notebooks]"
 ```
 
+if you have opted for a local installation.
 
 ## Basic usage pattern
 
