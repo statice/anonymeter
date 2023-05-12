@@ -44,8 +44,7 @@ dev = [
     "flake8-broken-line~=0.5",
     "flake8-bugbear~=23.2",
     "pre-commit==2.20.0",
-    "mypy==0.961",
-    "pytest-mypy==0.9.1",
+    "mypy~=1.2.0",
 
     # Code formatting
     "isort~=5.10",

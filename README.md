@@ -34,6 +34,7 @@ description of the framework and the attack algorithms can be found in the paper
 [A Unified Framework for Quantifying Privacy Risk in Synthetic Data](https://petsymposium.org/popets/2023/popets-2023-0055.php), accepted at the 23rd Privacy Enhancing Technologies Symposium ([PETS 2023](https://petsymposium.org/cfp23.php)).
 
 
+
 ## Setup and installation
 
 `Anonymeter` requires Python 3.8.x, 3.9.x or 3.10.x installed. The simplest way to install `Anonymeter` is from `PyPi`. Simply run
@@ -104,12 +105,44 @@ evaluator.evaluate()
 risk = evaluator.risk()
 ```
 
+## Configuring logging
+
+`Anonymeter` uses the standard Python logger named `anonymeter`.
+You can configure the logging level and the output destination
+using the standard Python logging API (see [here](https://docs.python.org/3/library/logging.html) for more details).
+
+For example, to set the logging level to `DEBUG` you can use the following snippet:
+
+```python
+import logging
+
+# set the logging level to DEBUG
+logging.getLogger("anonymeter").setLevel(logging.DEBUG)
+```
+
+And if you want to log to a file, you can use the following snippet:
+
+```python
+import logging
+
+# create a file handler
+file_handler = logging.FileHandler("anonymeter.log")
+
+# set the logging level for the file handler
+file_handler.setLevel(logging.DEBUG)
+
+# add the file handler to the logger
+logger = logging.getLogger("anonymeter")
+logger.addHandler(file_handler)
+logger.setLevel(logging.DEBUG)
+```
+
+
 ## Cite this work
 
 If you use anonymeter in your work, we would appreciate citations to the following paper:
 
 "A Unified Framework for Quantifying Privacy Risk in Synthetic Data", M. Giomi *et al*, PoPETS 2023.
-
 This `bibtex` entry can be used to refer to the paper:
 
 ```text

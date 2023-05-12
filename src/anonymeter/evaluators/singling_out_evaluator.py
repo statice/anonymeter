@@ -13,6 +13,7 @@ from scipy.optimize import curve_fit
 from anonymeter.stats.confidence import EvaluationResults, PrivacyRisk
 
 rng = np.random.default_rng()
+logger = logging.getLogger(__name__)
 
 
 def _escape_quotes(string: str) -> str:
@@ -122,7 +123,7 @@ def safe_query_counts(query: str, df: pd.DataFrame) -> Optional[int]:
     try:
         return len(df.query(query, engine="python"))
     except Exception as ex:
-        logging.debug(f"Query {query} failed with {ex}.")
+        logger.debug(f"Query {query} failed with {ex}.")
         return None
 
 
@@ -346,7 +347,7 @@ def _evaluate_queries(df: pd.DataFrame, queries: List[str]) -> List[str]:
     counts = np.array([safe_query_counts(query=q, df=df) for q in queries], dtype=float)
 
     if np.any(np.isnan(counts)) > 0:
-        logging.warning(
+        logger.warning(
             f"Found {np.sum(np.isnan(counts))} failed queries "
             f"out of {len(queries)}. Check DEBUG messages for more details."
         )
@@ -366,7 +367,7 @@ def _generate_singling_out_queries(df: pd.DataFrame, mode: str, n_attacks: int, 
         raise RuntimeError(f"Parameter `mode` can be either `univariate` or `multivariate`. Got {mode} instead.")
 
     if len(queries) < n_attacks:
-        logging.warning(
+        logger.warning(
             f"Attack `{mode}` could generate only {len(queries)} "
             f"singling out queries out of the requested {n_attacks}. "
             "This can probably lead to an underestimate of the "
@@ -444,12 +445,12 @@ class SinglingOutEvaluator:
         """
         return self._random_queries if baseline else self._queries
 
-    def evaluate(self, mode: str) -> "SinglingOutEvaluator":
+    def evaluate(self, mode: str = "multivariate") -> "SinglingOutEvaluator":
         """Run the attack and evaluate the guesses on the original dataset.
 
         Parameters
         ----------
-        mode : str
+        mode : str, default is "multivariate"
             Name of the algorithm used to generate the singling out queries.
             Could be either `multivariate` or `univariate`.
 
@@ -459,7 +460,12 @@ class SinglingOutEvaluator:
             The evaluated singling out evaluator.
 
         """
-        n_cols = 1 if mode == "univariate" else self._n_cols
+        if mode == "multivariate":
+            n_cols = self._n_cols
+        elif mode == "univariate":
+            n_cols = 1
+        else:
+            raise ValueError(f"mode must be either 'multivariate' or 'univariate', got {mode} instead.")
 
         baseline_queries = _random_queries(df=self._syn, n_queries=self._n_attacks, n_cols=n_cols)
         self._baseline_queries = _evaluate_queries(df=self._ori, queries=baseline_queries)

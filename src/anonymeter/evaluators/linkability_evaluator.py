@@ -11,6 +11,8 @@ import pandas as pd
 from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors
 from anonymeter.stats.confidence import EvaluationResults, PrivacyRisk
 
+logger = logging.getLogger(__name__)
+
 
 class LinkabilityIndexes:
     """Utility class to store indexes from linkability attack.
@@ -50,7 +52,7 @@ class LinkabilityIndexes:
 
         """
         if n_neighbors > self._idx_0.shape[0]:
-            logging.warning(f"Neighbors too large ({n_neighbors}, using {self._idx_0.shape[0]}) instead.")
+            logger.warning(f"Neighbors too large ({n_neighbors}, using {self._idx_0.shape[0]}) instead.")
             n_neighbors = self._idx_0.shape[0]
 
         if n_neighbors < 1:
