@@ -14,6 +14,8 @@ from numba import float64, int64, jit
 from anonymeter.preprocessing.transformations import mixed_types_transform
 from anonymeter.preprocessing.type_detection import detect_consistent_col_types
 
+logger = logging.getLogger(__name__)
+
 
 @jit(nopython=True, nogil=True)
 def gower_distance(r0: np.ndarray, r1: np.ndarray, cat_cols_index: np.ndarray) -> float64:
@@ -199,7 +201,7 @@ class MixedTypeKNeighbors:
             n_neighbors = self._n_neighbors
 
         if n_neighbors > self._candidates.shape[0]:
-            logging.warning(
+            logger.warning(
                 f"Parameter ``n_neighbors``={n_neighbors} cannot be "
                 f"larger than the size of the training data {self._candidates.shape[0]}."
             )

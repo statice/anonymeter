@@ -20,7 +20,7 @@ def _run_attack(
     n_jobs: int,
     naive: bool,
     regression: Optional[bool],
-) -> np.ndarray:
+) -> int:
     if regression is None:
         regression = pd.api.types.is_numeric_dtype(target[secret])
 
@@ -159,7 +159,7 @@ class InferenceEvaluator:
         self._aux_cols = aux_cols
         self._evaluated = False
 
-    def _attack(self, target: pd.DataFrame, naive: bool, n_jobs: int) -> np.ndarray:
+    def _attack(self, target: pd.DataFrame, naive: bool, n_jobs: int) -> int:
         return _run_attack(
             target=target,
             syn=self._syn,

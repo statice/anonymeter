@@ -8,6 +8,8 @@ from typing import List, Tuple
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
+logger = logging.getLogger(__name__)
+
 
 def _encode_categorical(
     df1: pd.DataFrame,
@@ -33,7 +35,7 @@ def _scale_numerical(df1: pd.DataFrame, df2: pd.DataFrame) -> Tuple[pd.DataFrame
 
     if any(ranges == 0):
         cnames = ", ".join(ranges[ranges == 0].index.values)
-        logging.debug(
+        logger.debug(
             f"Numerical column(s) {cnames} have a null-range: all elements "
             "have the same value. These column(s) won't be scaled."
         )
