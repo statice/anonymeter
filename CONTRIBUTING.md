@@ -4,7 +4,31 @@
 
 ### Building the new version
 
-Increment the version in `pyproject.toml`.
+1. Increment the version in `pyproject.toml`.
+
+1. Update the `CHANGELOG.md`.
+
+    - Follow [the guidelines](https://keepachangelog.com/)
+    - Rename `Unreleased` section to the new version
+    - Create a new empty `Unreleased` section
+
+1. Create a PR with the title `Release [version]`, ask for a review.
+
+1. Publish the package to Test PyPi and verify that it's working correctly
+   (the instructions are below).
+
+1. Merge the PR.
+
+1. [Create new release](https://github.com/statice/anonymeter/releases/new)
+   in github
+
+    - specify the new tag which equals to the new `[version]`
+    - copy paste the new release notes from the `CHANGELOG.md`
+
+
+### Publishing to Test PyPi
+
+Don't forget to pull the latest `main`.
 
 Install development dependencies:
 ```bash
@@ -16,8 +40,6 @@ Build a source and a wheel distributions:
 rm -rf ./dist # clean the build directory if necessary
 python -m build
 ```
-
-### Publishing to Test Pypi
 
 Login to Test PyPi. Create a new account if you don't have it yet
 and ask to be added as a collaborator for Anonymeter.
@@ -60,6 +82,8 @@ python -m pytest
 Once you tested the package with Test PyPi, you're ready to publish to
 the original PyPi.
 
+Pull the latest `main` and build the package as described above.
+
 Login to PyPi. Create a new account if you don't have it yet
 and ask to be added as a collaborator for Anonymeter.
 
@@ -75,15 +99,3 @@ Upload the artifacts to PyPi:
 ```bash
 twine upload dist/*
 ```
-
-### Publish the new release to GitHub
-
-Commit the version update:
-
-```bash
-git commit -m "Version bump -> NEW_VERSION" pyproject.toml
-```
-
-Tag the source: `git tag NEW_VERSION`.
-
-Push commit and tag: `git push --tags origin main`.

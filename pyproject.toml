@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anonymeter"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name="Statice GmbH", email="hello@statice.ai" },
 ]
@@ -62,6 +62,7 @@ dev = [
 [project.urls]
 "Homepage" = "https://github.com/statice/anonymeter"
 "Bug Tracker" = "https://github.com/statice/anonymeter/issues"
+"Changelog" = "https://github.com/statice/anonymeter/blob/main/CHANGELOG.md"
 
 [tool.isort]
 profile = "black"
