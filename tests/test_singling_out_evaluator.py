@@ -19,7 +19,6 @@ from tests.fixtures import get_adult
 
 @pytest.mark.parametrize("mode", ["univariate", "multivariate"])
 def test_so_general(mode):
-
     ori = get_adult("ori", n_samples=10)
     syn = get_adult("syn", n_samples=10)
     soe = SinglingOutEvaluator(ori=ori, syn=syn, n_attacks=5).evaluate(mode=mode)
@@ -30,7 +29,6 @@ def test_so_general(mode):
 
 
 def test_singling_out_queries_unique():
-
     df = pd.DataFrame({"c1": [1], "c2": [2]})
 
     queries = UniqueSinglingOutQueries()
@@ -78,7 +76,7 @@ def test_univariate_singling_out_queries():
 
 def test_singling_out_query_generator():
     df = pd.DataFrame({"c0": ["a", "b"], "c1": [1.23, 9.87]})
-    queries = multivariate_singling_out_queries(df=df, n_queries=2, n_cols=2)
+    queries = multivariate_singling_out_queries(df=df, n_queries=2, n_cols=2, max_attempts=None)
     possible_queries = [
         "c1<= 1.23 & c1>= 9.87",
         "c1<= 1.23 & c0== 'b'",
@@ -122,3 +120,12 @@ def test_probability_integral(n, w_min, w_max):
     desired, _ = integrate.quad(lambda x: _so_probability(w=x, n=n), a=w_min, b=w_max)
     integral = singling_out_probability_integral(n=n, w_min=w_min, w_max=w_max)
     np.testing.assert_almost_equal(desired, integral)
+
+
+@pytest.mark.parametrize("max_attempts", [1, 2, 3])
+def test_so_evaluator_max_attempts(max_attempts):
+    ori = get_adult("ori", 10)
+    soe = SinglingOutEvaluator(ori=ori, syn=ori, n_attacks=10, max_attempts=max_attempts)
+    soe.evaluate(mode="multivariate")
+
+    assert len(soe.queries()) <= max_attempts
