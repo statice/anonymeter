@@ -39,13 +39,11 @@ def _query_from_record(record: pd.Series, dtypes: pd.Series, columns: List[str],
     query = []
 
     for col in columns:
-
         if pd.isna(record[col]):
             item = ".isna()"
         elif is_bool_dtype(dtypes[col]):
             item = f"== {record[col]}"
         elif is_numeric_dtype(dtypes[col]):
-
             if medians is None:
                 operator = rng.choice([">=", "<="])
             else:
@@ -86,7 +84,6 @@ def _random_query(unique_values: Dict[str, List[Any]], cols: List[str]):
     query = []
 
     for col in cols:
-
         values = unique_values[col]
         val = rng.choice(values)
 
@@ -109,7 +106,6 @@ def _random_query(unique_values: Dict[str, List[Any]], cols: List[str]):
 
 
 def _random_queries(df: pd.DataFrame, n_queries: int, n_cols: int) -> List[str]:
-
     random_columns = [rng.choice(df.columns, size=n_cols, replace=False).tolist() for _ in range(n_queries)]
     unique_values = {col: df[col].unique() for col in df.columns}
 
@@ -174,7 +170,6 @@ def _measure_queries_success(
     min_rows = min(1000, len(df))
 
     for n_rows in np.linspace(min_rows, len(df), n_meas).astype(int):
-
         for _ in range(n_repeat):
             successes.append(len(_evaluate_queries(df=df.sample(n_rows, replace=False), queries=queries)))
             sizes.append(n_rows)
@@ -245,7 +240,6 @@ class UniqueSinglingOutQueries:
         sorted_query = "".join(sorted(query))
 
         if sorted_query not in self._set:
-
             counts = safe_query_counts(query=query, df=df)
 
             if counts is not None and counts == 1:
@@ -281,7 +275,6 @@ def univariate_singling_out_queries(df: pd.DataFrame, n_queries: int) -> List[st
     queries = []
 
     for col in df.columns:
-
         if df[col].isna().sum() == 1:
             queries.append(f"{col}.isna()")
 
@@ -310,7 +303,9 @@ def univariate_singling_out_queries(df: pd.DataFrame, n_queries: int) -> List[st
     return so_queries.queries
 
 
-def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int, n_cols: int) -> List[str]:
+def multivariate_singling_out_queries(
+    df: pd.DataFrame, n_queries: int, n_cols: int, max_attempts: Optional[int]
+) -> List[str]:
     """Generates singling out queries from a combination of attributes.
 
     Parameters
@@ -322,6 +317,16 @@ def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int, n_cols: 
     n_cols: float
         Number of columns that the attacker uses to create the
         singling out queries.
+    max_attemps: int, optional.
+        Maximum number of attempts that the attacker can make to generate
+        the requested ``n_attacks`` singling out queries. This is useful to
+        avoid excessively long running calculations. There can be combinations
+        of hyperparameters (`n_cols`) and datasets that make the task of
+        generating enough singling out queries is too hard. This parameter
+        caps the total number of query generation attempts, both those that
+        are successfull as those that are not. If ``max_attempts`` is None,
+        no limit will be imposed.
+
 
     Returns
     -------
@@ -332,13 +337,26 @@ def multivariate_singling_out_queries(df: pd.DataFrame, n_queries: int, n_cols: 
     so_queries = UniqueSinglingOutQueries()
     medians = df.median(numeric_only=True)
 
+    n_attempts = 0
+
     while len(so_queries) < n_queries:
+        if max_attempts is not None and n_attempts >= max_attempts:
+            logger.warning(
+                f"Reached maximum number of attempts {max_attempts} when generating singling out queries. "
+                f"Returning {len(so_queries.queries)} instead of the requested {n_queries}."
+                "To avoid this, increase the number of attempts or set it to ``None`` to disable "
+                "The limitation entirely."
+            )
+            return so_queries.queries
+
         record = df.iloc[rng.integers(df.shape[0])]
         columns = rng.choice(df.columns, size=n_cols, replace=False).tolist()
 
         query = _query_from_record(record=record, dtypes=df.dtypes, columns=columns, medians=medians)
 
         so_queries.check_and_append(query=query, df=df)
+
+        n_attempts += 1
 
     return so_queries.queries
 
@@ -356,12 +374,19 @@ def _evaluate_queries(df: pd.DataFrame, queries: List[str]) -> List[str]:
     return [q for iq, q in enumerate(queries) if success[iq]]
 
 
-def _generate_singling_out_queries(df: pd.DataFrame, mode: str, n_attacks: int, n_cols: int) -> List[str]:
+def _generate_singling_out_queries(
+    df: pd.DataFrame, mode: str, n_attacks: int, n_cols: int, max_attempts: Optional[int]
+) -> List[str]:
     if mode == "univariate":
         queries = univariate_singling_out_queries(df=df, n_queries=n_attacks)
 
     elif mode == "multivariate":
-        queries = multivariate_singling_out_queries(df=df, n_queries=n_attacks, n_cols=n_cols)
+        queries = multivariate_singling_out_queries(
+            df=df,
+            n_queries=n_attacks,
+            n_cols=n_cols,
+            max_attempts=max_attempts,
+        )
 
     else:
         raise RuntimeError(f"Parameter `mode` can be either `univariate` or `multivariate`. Got {mode} instead.")
@@ -408,6 +433,16 @@ class SinglingOutEvaluator:
     control : pd.DataFrame (optional)
         Independent sample of original records **not** used to create the
         synthetic dataset. This is used to evaluate the excess privacy risk.
+    max_attempts : int or None, default is 10.000.000
+        Maximum number of attempts that the attacker can make to generate
+        the requested ``n_attacks`` singling out queries. This is useful to
+        avoid excessively long running calculations. There can be combinations
+        of hyperparameters (`n_cols`) and datasets that make the task of
+        generating enough singling out queries is too hard. This parameter
+        caps the total number of query generation attempts, both those that
+        are successfull as those that are not. If ``max_attempts`` is None,
+        no limit will be imposed.
+
     """
 
     def __init__(
@@ -417,12 +452,14 @@ class SinglingOutEvaluator:
         n_attacks: int = 500,
         n_cols: int = 3,
         control: Optional[pd.DataFrame] = None,
+        max_attempts: Optional[int] = 10000000,
     ):
         self._ori = ori.drop_duplicates()
         self._syn = syn.drop_duplicates()
         self._n_attacks = n_attacks
         self._n_cols = n_cols
         self._control = None if control is None else control.drop_duplicates()
+        self._max_attempts = max_attempts
         self._queries: List[str] = []
         self._random_queries: List[str] = []
         self._evaluated = False
@@ -472,7 +509,11 @@ class SinglingOutEvaluator:
         self._n_baseline = len(self._baseline_queries)
 
         queries = _generate_singling_out_queries(
-            df=self._syn, n_attacks=self._n_attacks, n_cols=self._n_cols, mode=mode
+            df=self._syn,
+            n_attacks=self._n_attacks,
+            n_cols=self._n_cols,
+            mode=mode,
+            max_attempts=self._max_attempts,
         )
         self._queries = _evaluate_queries(df=self._ori, queries=queries)
         self._n_success = len(self._queries)
@@ -485,7 +526,6 @@ class SinglingOutEvaluator:
             # correct the number of success against the control set
             # to account for different dataset sizes.
             if len(self._control) != len(self._ori):
-
                 # fit the model to the data:
                 fitted_model = fit_correction_term(df=self._control, queries=queries)
 
