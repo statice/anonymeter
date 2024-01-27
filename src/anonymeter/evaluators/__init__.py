@@ -6,4 +6,4 @@ from anonymeter.evaluators.inference_evaluator import InferenceEvaluator
 from anonymeter.evaluators.linkability_evaluator import LinkabilityEvaluator
 from anonymeter.evaluators.singling_out_evaluator import SinglingOutEvaluator
 
-__all__ = ["SinglingOutEvaluator", "LinkabilityEvaluator", "InferenceEvaluator"]
+__all__ = ["InferenceEvaluator", "LinkabilityEvaluator", "SinglingOutEvaluator"]

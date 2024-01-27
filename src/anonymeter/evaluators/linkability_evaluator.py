@@ -6,6 +6,7 @@ import logging
 from typing import Dict, List, Optional, Set, Tuple, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors
@@ -32,7 +33,7 @@ class LinkabilityIndexes:
 
     """
 
-    def __init__(self, idx_0: np.ndarray, idx_1: np.ndarray):
+    def __init__(self, idx_0: npt.NDArray, idx_1: npt.NDArray):
         self._idx_0 = idx_0
         self._idx_1 = idx_1
 
@@ -89,13 +90,13 @@ def _count_links(links: Dict[int, Set[int]]) -> int:
     """Count links."""
     linkable: Set[int] = set()
 
-    for ori_idx in links.keys():
+    for ori_idx in links:
         linkable = linkable | {ori_idx}
 
     return len(linkable)
 
 
-def _random_links(n_synthetic: int, n_attacks: int, n_neighbors: int) -> np.ndarray:
+def _random_links(n_synthetic: int, n_attacks: int, n_neighbors: int) -> npt.NDArray:
     rng = np.random.default_rng()
 
     return np.array([rng.choice(n_synthetic, size=n_neighbors, replace=False) for _ in range(n_attacks)])
@@ -108,7 +109,7 @@ def _random_linkability_attack(n_synthetic: int, n_attacks: int, n_neighbors: in
     return LinkabilityIndexes(idx_0=idx_0, idx_1=idx_1)
 
 
-def _find_nn(syn: pd.DataFrame, ori: pd.DataFrame, n_jobs: int, n_neighbors: int) -> np.ndarray:
+def _find_nn(syn: pd.DataFrame, ori: pd.DataFrame, n_jobs: int, n_neighbors: int) -> npt.NDArray:
     nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=n_neighbors)
 
     if syn.ndim == 1:

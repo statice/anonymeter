@@ -5,6 +5,7 @@
 from typing import List, Optional
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors
@@ -33,6 +34,9 @@ def _run_attack(
         nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=1).fit(candidates=syn[aux_cols])
 
         guesses_idx = nn.kneighbors(queries=targets[aux_cols])
+        if isinstance(guesses_idx, tuple):
+            raise RuntimeError("guesses_idx cannot be a tuple")
+
         guesses = syn.iloc[guesses_idx.flatten()][secret]
 
     return evaluate_inference_guesses(guesses=guesses, secrets=targets[secret], regression=regression).sum()
@@ -40,7 +44,7 @@ def _run_attack(
 
 def evaluate_inference_guesses(
     guesses: pd.Series, secrets: pd.Series, regression: bool, tolerance: float = 0.05
-) -> np.ndarray:
+) -> npt.NDArray:
     """Evaluate the success of an inference attack.
 
     The attack is successful if the attacker managed to make a correct guess.
@@ -70,16 +74,16 @@ def evaluate_inference_guesses(
         Array of boolean values indicating the correcteness of each guess.
 
     """
-    guesses = guesses.values
-    secrets = secrets.values
+    guesses_np = guesses.to_numpy()
+    secrets_np = secrets.to_numpy()
 
     if regression:
-        rel_abs_diff = np.abs(guesses - secrets) / (guesses + 1e-12)
+        rel_abs_diff = np.abs(guesses_np - secrets_np) / (guesses_np + 1e-12)
         value_match = rel_abs_diff <= tolerance
     else:
-        value_match = guesses == secrets
+        value_match = guesses_np == secrets_np
 
-    nan_match = np.logical_and(pd.isnull(guesses), pd.isnull(secrets))
+    nan_match = np.logical_and(pd.isnull(guesses_np), pd.isnull(secrets_np))
 
     return np.logical_or(nan_match, value_match)
 

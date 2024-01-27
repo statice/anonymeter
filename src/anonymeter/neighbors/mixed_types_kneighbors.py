@@ -7,9 +7,10 @@ from math import fabs, isnan
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from joblib import Parallel, delayed
-from numba import float64, int64, jit
+from numba import jit
 
 from anonymeter.preprocessing.transformations import mixed_types_transform
 from anonymeter.preprocessing.type_detection import detect_consistent_col_types
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @jit(nopython=True, nogil=True)
-def gower_distance(r0: np.ndarray, r1: np.ndarray, cat_cols_index: np.ndarray) -> float64:
+def gower_distance(r0: npt.NDArray, r1: npt.NDArray, cat_cols_index: int) -> float:
     r"""Distance between two records inspired by the Gower distance [1].
 
     To handle mixed type data, the distance is specialized for numerical (continuous)
@@ -40,9 +41,9 @@ def gower_distance(r0: np.ndarray, r1: np.ndarray, cat_cols_index: np.ndarray) -
 
     Parameters
     ----------
-    r0 : np.array
+    r0 : npt.NDArray
         Input array of shape (D,).
-    r1 : np.array
+    r1 : npt.NDArray
         Input array of shape (D,).
     cat_cols_index : int
         Index delimiting the categorical columns in r0/r1 if present. For example,
@@ -59,7 +60,6 @@ def gower_distance(r0: np.ndarray, r1: np.ndarray, cat_cols_index: np.ndarray) -
     dist = 0.0
 
     for i in range(len(r0)):
-
         if isnan(r0[i]) and isnan(r1[i]):
             dist += 1
 
@@ -74,41 +74,41 @@ def gower_distance(r0: np.ndarray, r1: np.ndarray, cat_cols_index: np.ndarray) -
 
 
 @jit(nopython=True, nogil=True)
-def _nearest_neighbors(queries, candidates, cat_cols_index, n_neighbors):
+def _nearest_neighbors(
+    queries: npt.NDArray, candidates: npt.NDArray, cat_cols_index: int, n_neighbors: int
+) -> Tuple[npt.NDArray[np.int64], npt.NDArray[np.float64]]:
     r"""For every element of ``queries``, find its nearest neighbors in ``candidates``.
 
     Parameters
     ----------
-    queries : np.ndarray
+    queries : npt.NDArray
         Input array of shape (Nx, D).
-    candidates : np.ndarray
+    candidates : npt.NDArray
         Input array of shape (Ny, D).
+    cat_cols_index : int
+        Index delimiting the categorical columns in X/Y, if present.
     n_neighbors : int
         Determines the number of closest neighbors per entry to be returned.
-    cat_cols_idx : int
-        Index delimiting the categorical columns in X/Y, if present.
 
     Returns
     -------
-    idx : np.ndarray[int]
+    idx : npt.NDArray[int64]
         Array of shape (Nx, n_neighbors). For each element in ``queries``,
         this array contains the indices of the closest neighbors in
         ``candidates``. That is, ``candidates[idx[i]]`` are the elements of
         ``candidates`` that are closer to ``queries[i]``.
-    lps : np.ndarray[float]
+    lps : npt.NDArray[float64]
         Array of shape (Nx, n_neighbors). This array containing the distances
         between the record pairs identified by idx.
 
     """
-    idx = np.zeros((queries.shape[0], n_neighbors), dtype=int64)
-    dists = np.zeros((queries.shape[0], n_neighbors), dtype=float64)
+    idx = np.zeros((queries.shape[0], n_neighbors), dtype=np.int64)
+    dists = np.zeros((queries.shape[0], n_neighbors), dtype=np.float64)
 
     for ix in range(queries.shape[0]):
-
-        dist_ix = np.zeros((candidates.shape[0]), dtype=float64)
+        dist_ix = np.zeros((candidates.shape[0]), dtype=np.float64)
 
         for iy in range(candidates.shape[0]):
-
             dist_ix[iy] = gower_distance(r0=queries[ix], r1=candidates[iy], cat_cols_index=cat_cols_index)
 
         close_match_idx = dist_ix.argsort()[:n_neighbors]
@@ -167,7 +167,7 @@ class MixedTypeKNeighbors:
 
     def kneighbors(
         self, queries: pd.DataFrame, n_neighbors: Optional[int] = None, return_distance: bool = False
-    ) -> Union[Tuple[np.ndarray, np.ndarray], np.ndarray]:
+    ) -> Union[Tuple[npt.NDArray, npt.NDArray], npt.NDArray]:
         """Find the nearest neighbors for a set of query points.
 
         Note
@@ -218,7 +218,6 @@ class MixedTypeKNeighbors:
         candidates = candidates[cols].values
 
         with Parallel(n_jobs=self._n_jobs, backend="threading") as executor:
-
             res = executor(
                 delayed(_nearest_neighbors)(
                     queries=queries[ii : ii + 1],
@@ -229,8 +228,8 @@ class MixedTypeKNeighbors:
                 for ii in range(queries.shape[0])
             )
 
-            indexes, distances = zip(*res)
-            indexes, distances = np.vstack(indexes), np.vstack(distances)
+            indexes_array, distances_array = zip(*res)
+            indexes, distances = np.vstack(indexes_array), np.vstack(distances_array)
 
         if return_distance:
             return distances, indexes

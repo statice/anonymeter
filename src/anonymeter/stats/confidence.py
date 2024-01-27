@@ -48,7 +48,10 @@ class SuccessRate(NamedTuple):
 
 def probit(confidence_level: float) -> float:
     """Compute the probit for the given confidence level."""
-    return norm.ppf(0.5 * (1.0 + confidence_level))
+    result = norm.ppf(0.5 * (1.0 + confidence_level))
+    if not isinstance(result, float):
+        raise RuntimeError("Unexpected error: probit resulted in a non-float value.")
+    return result
 
 
 def success_rate(n_total: int, n_success: int, confidence_level: float) -> SuccessRate:
@@ -152,9 +155,9 @@ def bind_value(point_estimate: float, error_bound: float) -> PrivacyRisk:
     Returns
     -------
     float
-        Point estimate respecting the bounds 0–1 or 0–100.
+        Point estimate respecting the bounds 0-1 or 0-100.
     Tuple[float, float]
-        Asymmetric confidence interval respecting the bounds 0–1 or 0–100.
+        Asymmetric confidence interval respecting the bounds 0-1 or 0-100.
 
     """
     bound_point = min(max(point_estimate, 0.0), 1.0)
