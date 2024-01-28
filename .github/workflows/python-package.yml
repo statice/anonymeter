@@ -16,6 +16,9 @@ jobs:
         # We test only the minimum and the maximum supported versions of python
         python-version: ["3.8", "3.11"]
         pandas-version: ["1.5", "2.1"]
+        exclude:
+        - python-version: "3.8"
+          pandas-version: "2.1"
 
     steps:
     - uses: actions/checkout@v2

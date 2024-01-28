@@ -42,7 +42,7 @@ dev = [
     "mypy~=1.8.0",
 
     # Pre-commit checks
-    "pre-commit~=3.6",
+    "pre-commit~=3.5",
 
     # Testing
     "pytest~=7.4",
