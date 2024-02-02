@@ -43,6 +43,8 @@ def _scale_numerical(df1: pd.DataFrame, df2: pd.DataFrame) -> Tuple[pd.DataFrame
 
     df1_scaled = df1.apply(lambda x: x / ranges[x.name])
     df2_scaled = df2.apply(lambda x: x / ranges[x.name])
+    if isinstance(df1_scaled, pd.Series) or isinstance(df2_scaled, pd.Series):
+        raise RuntimeError("Unexpected error: scaling resulted in a Series.")
 
     return df1_scaled, df2_scaled
 

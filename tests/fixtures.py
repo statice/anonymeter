@@ -35,6 +35,6 @@ def get_adult(which: str, n_samples: Optional[int] = None) -> pd.DataFrame:
     elif which == "syn":
         fname = "adults_syn.csv"
     else:
-        return ValueError(f"Invalid value {which} for parameter `which`. Available are: 'ori' or 'syn'.")
+        raise ValueError(f"Invalid value {which} for parameter `which`. Available are: 'ori' or 'syn'.")
 
     return pd.read_csv(os.path.join(TEST_DIR_PATH, "datasets", fname), nrows=n_samples)

@@ -14,6 +14,7 @@ from anonymeter.evaluators.singling_out_evaluator import (
     singling_out_probability_integral,
     univariate_singling_out_queries,
 )
+
 from tests.fixtures import get_adult
 
 
@@ -101,7 +102,7 @@ def test_singling_out_risk_estimate(confidence_level, mode):
     ori = get_adult("ori", 10)
     soe = SinglingOutEvaluator(ori=ori, syn=ori, n_attacks=5)
     soe.evaluate(mode=mode)
-    risk, ci = soe.risk(confidence_level=confidence_level)
+    _, ci = soe.risk(confidence_level=confidence_level)
     np.testing.assert_allclose(ci[1], 1.0)
 
 

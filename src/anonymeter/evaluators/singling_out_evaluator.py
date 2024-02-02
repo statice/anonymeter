@@ -6,8 +6,9 @@ import logging
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
-from pandas.api.types import is_bool_dtype, is_categorical_dtype, is_numeric_dtype
+from pandas.api.types import is_bool_dtype, is_numeric_dtype
 from scipy.optimize import curve_fit
 
 from anonymeter.stats.confidence import EvaluationResults, PrivacyRisk
@@ -53,7 +54,7 @@ def _query_from_record(record: pd.Series, dtypes: pd.Series, columns: List[str],
                     operator = "<="
             item = f"{operator} {record[col]}"
 
-        elif is_categorical_dtype(dtypes[col]) and is_numeric_dtype(dtypes[col].categories.dtype):
+        elif isinstance(dtypes[col], pd.CategoricalDtype) and is_numeric_dtype(dtypes[col].categories.dtype):
             item = f"=={record[col]}"
         else:
             if isinstance(record[col], str):
@@ -91,7 +92,7 @@ def _random_query(unique_values: Dict[str, List[Any]], cols: List[str]):
             expression = f"{_random_operator('boolean')}{col}.isna()"
         elif is_bool_dtype(values):
             expression = f"{_random_operator('boolean')}{col}"
-        elif is_categorical_dtype(values):
+        elif isinstance(values, pd.CategoricalDtype):
             expression = f"{col} {_random_operator('categorical')} {val}"
         elif is_numeric_dtype(values):
             expression = f"{col} {_random_operator('numerical')} {val}"
@@ -165,7 +166,7 @@ def singling_out_probability_integral(n: int, w_min: float, w_max: float) -> flo
 
 def _measure_queries_success(
     df: pd.DataFrame, queries: List[str], n_repeat: int, n_meas: int
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> Tuple[npt.NDArray, npt.NDArray]:
     sizes, successes = [], []
     min_rows = min(1000, len(df))
 
@@ -181,7 +182,7 @@ def _model(x, w_eff, norm):
     return norm * singling_out_probability_integral(n=x, w_min=0, w_max=w_eff)
 
 
-def _fit_model(sizes: np.ndarray, successes: np.ndarray) -> Callable:
+def _fit_model(sizes: npt.NDArray, successes: npt.NDArray) -> Callable:
     # initial guesses
     w_eff_guess = 1 / np.max(sizes)
     norm_guess = 1 / singling_out_probability_integral(n=np.max(sizes), w_min=0, w_max=w_eff_guess)

@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors, gower_distance
+
 from tests.fixtures import get_adult
 
 rng = np.random.default_rng()
@@ -45,10 +46,12 @@ def test_mixed_type_kNN_shape(n_neighbors, n_queries):
     df = get_adult("ori", n_samples=10)
     nn = MixedTypeKNeighbors(n_neighbors=n_neighbors).fit(df)
     ids = nn.kneighbors(df.head(n_queries))
+    assert isinstance(ids, np.ndarray)
     assert ids.shape == (n_queries, n_neighbors)
 
     nn = MixedTypeKNeighbors().fit(df)
     ids = nn.kneighbors(df.head(n_queries), n_neighbors=n_neighbors)
+    assert isinstance(ids, np.ndarray)
     assert ids.shape == (n_queries, n_neighbors)
 
 

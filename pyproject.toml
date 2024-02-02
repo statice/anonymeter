@@ -13,7 +13,7 @@ authors = [
 ]
 description = "Measure singling out, linkability, and inference risk for synthetic data."
 readme = "README.md"
-requires-python = "<3.11, >3.7" # limited by Numba support
+requires-python = "<3.12, >3.7" # limited by Numba support
 license = {file = "LICENSE.md"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -23,10 +23,10 @@ classifiers = [
 
 dependencies = [
     "scikit-learn~=1.2",
-    "numpy >=1.11,<1.24",
-    "pandas~=1.4",
+    "numpy >=1.22, <1.27", # limited by Numba support
+    "pandas>=1.4",
     "joblib~=1.2",
-    "numba~=0.56",
+    "numba~=0.58",
 ]
 
 [project.optional-dependencies]
@@ -37,22 +37,15 @@ notebooks = [
 ]
 
 dev = [
-    # Linting and code checks
-    "flake8~=5.0",
-    "flake8-docstrings~=1.6.0",
-    "flake8-eradicate~=1.4.0",
-    "flake8-broken-line~=0.5",
-    "flake8-bugbear~=23.2",
-    "pre-commit==2.20.0",
-    "mypy~=1.2.0",
+    # Linting and formatting
+    "ruff~=0.1.14",
+    "mypy~=1.8.0",
 
-    # Code formatting
-    "isort~=5.10",
-    "black~=22.10",
+    # Pre-commit checks
+    "pre-commit~=3.5",
 
     # Testing
-    "pytest==7.1.2",
-    "pytest-cov==3.0.0",
+    "pytest~=7.4",
 
     # Building and packaging
     "build~=0.10",
@@ -64,58 +57,62 @@ dev = [
 "Bug Tracker" = "https://github.com/statice/anonymeter/issues"
 "Changelog" = "https://github.com/statice/anonymeter/blob/main/CHANGELOG.md"
 
-[tool.isort]
-profile = "black"
-known_first_party = "anonymeter"
-line_length = 120
-skip = [
-    ".git",
-    ".vscode",
-    ".venv",
-    ".pytest_cache",
-    ".mypy_cache",
-    "__init__.py",
-    "build",
-    "dist",
-    "htmlcov",
+[tool.ruff]
+# https://docs.astral.sh/ruff/configuration/
+
+line-length = 120
+
+select = [
+    "B",    # https://docs.astral.sh/ruff/rules/#flake8-bugbear-b
+    "C4",   # https://docs.astral.sh/ruff/rules/#flake8-comprehensions-c4
+    "E4",   # https://docs.astral.sh/ruff/rules/#error-e
+    "E7",
+    "E9",
+    "NPY",
+    "F",    # https://docs.astral.sh/ruff/rules/#pyflakes-f
+    "I001", # isort
+    "W",    # https://docs.astral.sh/ruff/rules/#pycodestyle-e-w
+    "YTT",  # https://docs.astral.sh/ruff/rules/#flake8-2020-ytt
+    "PGH",  # https://docs.astral.sh/ruff/rules/#pygrep-hooks-pgh
+    "PIE",  # https://docs.astral.sh/ruff/rules/#flake8-pie-pie
+    "UP",   # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "RUF",
 ]
 
-[tool.black]
-line-length = 120
-multi-line-output = 3
-include-trailing-comma = true
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.isort]
+known-first-party = ["anonymeter"]
+forced-separate = ["tests"]
+
+[tool.ruff.lint]
+extend-select = ["NPY201"]
+preview = true
 
 [tool.mypy]
-disallow_untyped_defs = false
 ignore_missing_imports = true
 follow_imports = "silent"
 show_column_numbers = true
+check_untyped_defs = true
 show_error_context = false
 exclude = [
     "docs",
-    "tests",
     "build",
     "dist",
-    "htmlcov"
 ]
-
-# Explicitly blacklist modules in use that don't have type stubs
-[mypy-pandas]
-ignore_missing_imports=true
-
-[mypy-numpy]
-ignore_missing_imports=true
 
 [tool.pytest.ini_options]
 filterwarnings = [
     "ignore::UserWarning",
     "ignore::FutureWarning",
-    "ignore::PendingDeprecationWarning"
+    "ignore::PendingDeprecationWarning",
 ]
 testpaths = [
-    "tests"
+    "tests",
 ]
 pythonpath = [
-    "src"
+    "src",
 ]
 xfail_strict=true

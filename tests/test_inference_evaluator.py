@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from anonymeter.evaluators.inference_evaluator import InferenceEvaluator, evaluate_inference_guesses
+
 from tests.fixtures import get_adult
 
 

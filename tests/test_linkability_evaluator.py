@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from anonymeter.evaluators.linkability_evaluator import LinkabilityEvaluator, LinkabilityIndexes
+
 from tests.fixtures import get_adult
 
 rng = np.random.default_rng(seed=42)
@@ -65,7 +66,6 @@ def test_linkability_evaluator_neighbors(n_neighbors, confidence_level, expected
 
 @pytest.mark.parametrize("n_neighbors, fails", [(1, False), (2, False), (3, False), (4, False), (5, True), (45, True)])
 def test_linkability_evaluator_neighbors_fails(n_neighbors, fails):
-
     ori = pd.DataFrame({"col0": [0, 0, 4, 0], "col1": [0, 1, 9, 4]})
     syn = pd.DataFrame({"col0": [0, 1, 4, 9], "col1": [0, 1, 4, 9]})
 
@@ -85,7 +85,16 @@ def test_baseline(n_neighbors, expected_risk):
     # what's inside the synthetic or the original dataframe.
     ori = pd.DataFrame(rng.choice(["a", "b"], size=(400, 2)), columns=["c0", "c1"])
     syn = pd.DataFrame([["a", "a"], ["b", "b"], ["a", "a"], ["a", "a"]], columns=["c0", "c1"])
-    evaluator = LinkabilityEvaluator(ori=ori, syn=syn, n_attacks=None, n_neighbors=n_neighbors, aux_cols=("c0", "c1"))
+    evaluator = LinkabilityEvaluator(
+        ori=ori,
+        syn=syn,
+        n_attacks=None,
+        n_neighbors=n_neighbors,
+        aux_cols=(
+            ["c0"],
+            ["c1"],
+        ),
+    )
     evaluator.evaluate(n_jobs=1)
     baseline_risk, _ = evaluator.risk(confidence_level=0.95, baseline=True)
     np.testing.assert_allclose(baseline_risk, expected_risk, atol=5e-2)
@@ -116,14 +125,25 @@ def test_linkability_risk(confidence_level):
     col_sample = rng.choice(ori.columns, size=4, replace=False)
 
     evaluator = LinkabilityEvaluator(
-        ori=ori, syn=ori, n_attacks=10, n_neighbors=5, aux_cols=(col_sample[:2], col_sample[2:])
+        ori=ori,
+        syn=ori,
+        n_attacks=10,
+        n_neighbors=5,
+        aux_cols=(
+            col_sample[:2].tolist(),
+            col_sample[2:].tolist(),
+        ),
     )
     evaluator.evaluate(n_jobs=1)
-    risk, ci = evaluator.risk(confidence_level=confidence_level)
+    _, ci = evaluator.risk(confidence_level=confidence_level)
     np.testing.assert_allclose(ci[1], 1.0)
 
 
 def test_evaluator_not_evaluated():
-    evaluator = LinkabilityEvaluator(ori=pd.DataFrame(), syn=pd.DataFrame(), aux_cols=[])
+    evaluator = LinkabilityEvaluator(
+        ori=pd.DataFrame(),
+        syn=pd.DataFrame(),
+        aux_cols=([], []),
+    )
     with pytest.raises(RuntimeError):
         evaluator.risk()
