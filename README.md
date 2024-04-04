@@ -10,7 +10,7 @@ according to the [Article 29 Working Party](https://ec.europa.eu/justice/article
 > Anonymeter has been positively reviewed by the technical experts from the [Commission Nationale de l’Informatique et des Libertés (CNIL)](https://www.cnil.fr/en/home) which, in their words, _“have not identified any reason suggesting that the proposed set of methods could not allow to effectively evaluate the extent to which the aforementioned three criteria are fulfilled or not in the context of production and use of synthetic datasets”_. The CNIL also expressed the opinion that the results of Anonymeter (i.e. the three risk scores) **should be used by the data controller to decide whether the residual risks of re-identification are acceptable or not, and whether the dataset could be considered anonymous**. [Here](/cnil) you can find the full letter with the CNIL opinion on Anonymeter.
 
 
-## `Anonymeter` in a nutshel
+## `Anonymeter` in a nutshell
 
 In `Anonymeter` each privacy risk is derived from a privacy attacker whose task is to use the synthetic dataset
 to come up with a set of *guesses* of the form:
@@ -155,3 +155,8 @@ This `bibtex` entry can be used to refer to the paper:
   title = {A Unified Framework for Quantifying Privacy Risk in Synthetic Data},
 }
 ```
+
+### License
+
+Licensed under Clear BSD License, see `LICENSE.md` to see the full license text. Patent-pending code (application US-20230401336-A1).
+
