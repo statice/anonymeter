@@ -2,6 +2,7 @@
 # Copyright (c) 2022 Anonos IP LLC.
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Privacy evaluator that measures the inference risk."""
+
 from typing import List, Optional
 
 import numpy as np
@@ -158,6 +159,15 @@ class InferenceEvaluator:
         self._syn = syn
         self._control = control
         self._n_attacks = n_attacks
+
+        # check if secret is a string column
+        if not isinstance(secret, str):
+            raise ValueError("secret must be a single column name")
+
+        # check if secret is present in the original dataframe
+        if secret not in ori.columns:
+            raise ValueError(f"secret column '{secret}' not found in ori dataframe")
+
         self._secret = secret
         self._regression = regression
         self._aux_cols = aux_cols

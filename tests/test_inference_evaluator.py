@@ -1,6 +1,8 @@
 # This file is part of Anonymeter and is released under BSD 3-Clause Clear License.
 # Copyright (c) 2022 Anonos IP LLC.
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
+from typing import Iterable
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -64,17 +66,27 @@ def test_evaluate_inference_guesses_regression_tolerance(guesses, secrets, toler
 @pytest.mark.parametrize(
     "ori, syn, expected",
     [
-        ([["a", "b"], ["c", "d"]], [["a", "b"], ["c", "d"]], 1),
+        ([["a", "b"], ["c", "d"]], [["a", "b"], ["c", "d"]], 1.0),
         ([["a", "b"], ["c", "d"]], [["a", "b"], ["c", "e"]], 0.5),
         ([["a", "b"], ["c", "d"]], [["a", "h"], ["c", "g"]], 0.0),
     ],
 )
-def test_inference_evaluator_rates(ori, syn, expected):
-    ori = pd.DataFrame(ori, columns=["c0", "c1"])
-    syn = pd.DataFrame(syn, columns=["c0", "c1"])
-    evaluator = InferenceEvaluator(ori=ori, syn=syn, control=ori, aux_cols=["c0"], secret="c1", n_attacks=2).evaluate(
-        n_jobs=1
-    )
+def test_inference_evaluator_rates(
+    ori: Iterable,
+    syn: Iterable,
+    expected: float,
+):
+    # created a dataframe from ori and name columns c0 and c1
+    ori = pd.DataFrame(ori, columns=pd.Index(["c0", "c1"]))
+    syn = pd.DataFrame(syn, columns=pd.Index(["c0", "c1"]))
+    evaluator = InferenceEvaluator(
+        ori=ori,
+        syn=syn,
+        control=ori,
+        aux_cols=["c0"],
+        secret="c1",
+        n_attacks=2,
+    ).evaluate(n_jobs=1)
     results = evaluator.results(confidence_level=0)
 
     np.testing.assert_equal(results.attack_rate, (expected, 0))
@@ -101,8 +113,13 @@ def test_inference_evaluator_leaks(aux_cols, secret):
 
 
 def test_evaluator_not_evaluated():
+    df = get_adult("ori", n_samples=10)
     evaluator = InferenceEvaluator(
-        ori=pd.DataFrame(), syn=pd.DataFrame(), control=pd.DataFrame(), aux_cols=[], secret=""
+        ori=df,
+        syn=df,
+        control=df,
+        aux_cols=["education_num", "marital", "capital_loss"],
+        secret="age",
     )
     with pytest.raises(RuntimeError):
         evaluator.risk()
