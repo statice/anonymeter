@@ -42,11 +42,19 @@ def test_singling_out_queries_unique():
     queries.check_and_append(q2, df=df)
     assert queries.queries == [q1, q2]
 
+
+def test_singling_out_queries_same_characters():
+    df = pd.DataFrame([{"c": 1.2}, {"c": 2.1}])
+
     queries = UniqueSinglingOutQueries()
-    q3, q4 = f"{q1} and {q2}", f"{q2} and {q1}"
-    queries.check_and_append(q3, df=df)
-    queries.check_and_append(q4, df=df)
-    assert queries.queries == [q3]
+    q1, q2 = "c == 1.2", "c == 2.1"
+
+    queries.check_and_append(q1, df=df)
+    queries.check_and_append(q1, df=df)
+    assert queries.queries == [q1]
+
+    queries.check_and_append(q2, df=df)
+    assert queries.queries == [q1, q2]
 
 
 def test_singling_out_queries():
@@ -80,11 +88,7 @@ def test_singling_out_query_generator():
     queries = multivariate_singling_out_queries(df=df, n_queries=2, n_cols=2, max_attempts=None)
     possible_queries = [
         "c1<= 1.23 & c1>= 9.87",
-        "c1<= 1.23 & c0== 'b'",
-        "c1<= 1.23 & c0== 'a'",
         "c1>= 9.87 & c1<= 1.23",
-        "c1>= 9.87 & c0== 'b'",
-        "c1>= 9.87 & c0== 'a'",
         "c0== 'b' & c1<= 1.23",
         "c0== 'b' & c1>= 9.87",
         "c0== 'b' & c0== 'a'",

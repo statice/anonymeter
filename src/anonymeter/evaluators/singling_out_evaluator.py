@@ -39,7 +39,7 @@ def _query_from_record(record: pd.Series, dtypes: pd.Series, columns: List[str],
     """Construct a query from the attributes in a record."""
     query = []
 
-    for col in columns:
+    for col in sorted(columns):
         if pd.isna(record[col]):
             item = ".isna()"
         elif is_bool_dtype(dtypes[col]):
@@ -84,7 +84,7 @@ def _random_query(unique_values: Dict[str, List[Any]], cols: List[str]):
     """Generate a random query using given columns."""
     query = []
 
-    for col in cols:
+    for col in sorted(cols):
         values = unique_values[col]
         val = rng.choice(values)
 
@@ -238,13 +238,12 @@ class UniqueSinglingOutQueries:
             Dataframe on which the queries need to single out.
 
         """
-        sorted_query = "".join(sorted(query))
 
-        if sorted_query not in self._set:
+        if query not in self._set:
             counts = safe_query_counts(query=query, df=df)
 
             if counts is not None and counts == 1:
-                self._set.add(sorted_query)
+                self._set.add(query)
                 self._list.append(query)
 
     def __len__(self):
@@ -275,7 +274,7 @@ def univariate_singling_out_queries(df: pd.DataFrame, n_queries: int) -> List[st
     """
     queries = []
 
-    for col in df.columns:
+    for col in sorted(df.columns):
         if df[col].isna().sum() == 1:
             queries.append(f"{col}.isna()")
 
