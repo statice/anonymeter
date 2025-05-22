@@ -13,7 +13,7 @@ authors = [
 ]
 description = "Measure singling out, linkability, and inference risk for synthetic data."
 readme = "README.md"
-requires-python = "<3.13, >3.9"
+requires-python = "<3.13, >=3.9"
 license = {file = "LICENSE.md"}
 classifiers = [
     "Programming Language :: Python :: 3",
