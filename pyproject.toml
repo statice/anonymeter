@@ -13,7 +13,7 @@ authors = [
 ]
 description = "Measure singling out, linkability, and inference risk for synthetic data."
 readme = "README.md"
-requires-python = "<3.12, >3.7" # limited by Numba support
+requires-python = "<3.13, >=3.9"
 license = {file = "LICENSE.md"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -23,10 +23,10 @@ classifiers = [
 
 dependencies = [
     "scikit-learn~=1.2",
-    "numpy >=1.22, <1.27", # limited by Numba support
+    "numpy >=1.22",
     "pandas>=1.4",
     "joblib~=1.2",
-    "numba~=0.58",
+    "numba~=0.59",
 ]
 
 [project.optional-dependencies]
