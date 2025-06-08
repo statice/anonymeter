@@ -656,7 +656,7 @@ class SinglingOutEvaluator:
         if self._control is None:
             self._n_control = None
         else:
-            self._n_control = len(_evaluate_queries(df=self._control, queries=queries))
+            self._n_control = len(_evaluate_queries_and_return_successful(df=self._control, queries=queries))
 
             # correct the number of success against the control set
             # to account for different dataset sizes.
