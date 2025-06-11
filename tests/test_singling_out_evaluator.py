@@ -10,8 +10,8 @@ from scipy import integrate
 from anonymeter.evaluators.singling_out_evaluator import (
     SinglingOutEvaluator,
     UniqueSinglingOutQueries,
-    multivariate_singling_out_queries,
     _evaluate_queries,
+    multivariate_singling_out_queries,
     singling_out_probability_integral,
     univariate_singling_out_queries,
 )

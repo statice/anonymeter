@@ -3,16 +3,15 @@
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Privacy evaluator that measures the singling out risk."""
 import logging
+import operator
+from functools import reduce
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import polars as pl
-import operator
-
 from scipy.optimize import curve_fit
-from functools import reduce
 
 from anonymeter.stats.confidence import EvaluationResults, PrivacyRisk
 
@@ -37,7 +36,7 @@ def _query_from_record(
 
     for col in sorted(columns):
         val = record[col]
-        
+
         if val is None or (isinstance(val, float) and np.isnan(val)):
             expr_col = pl.col(col).is_null()
 
@@ -144,7 +143,7 @@ def _random_queries(
     }
 
     queries = []
-    for i in range(n_queries):
+    for _ in range(n_queries):
         selected_cols = rng_to_use.choice(
             df.columns, size=n_cols, replace=False
         ).tolist()
@@ -386,7 +385,7 @@ def multivariate_singling_out_queries(
 
     """
     unique_so_queries = UniqueSinglingOutQueries(max_size=n_queries)
-    
+
     medians = df.median()
     medians_dict = medians.to_dicts()[0]
     dtypes_dict = {col: df[col].dtype for col in df.columns}
@@ -558,7 +557,7 @@ class SinglingOutEvaluator:
         are successfull as those that are not. If ``max_attempts`` is None,
         no limit will be imposed.
     seed : int or None, default is None
-        Random seed used to generate the singling out queries. 
+        Random seed used to generate the singling out queries.
 
     """
 
@@ -645,8 +644,8 @@ class SinglingOutEvaluator:
             self._n_attacks = len(queries)
 
         baseline_queries = _random_queries(
-            df=self._syn, 
-            n_queries=self._n_attacks, 
+            df=self._syn,
+            n_queries=self._n_attacks,
             n_cols=n_cols,
             rng=self._rng,
         )
