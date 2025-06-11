@@ -27,8 +27,8 @@ def _escape_quotes(string: str) -> str:
 def _query_from_record(
     record: dict,  # or pl.Series, but dict is often easier for single rows
     dtypes: dict,  # map col -> pl.DataType
-    columns: list[str],
-    medians: dict | None = None,  # map col -> median value
+    columns: List[str],
+    medians: dict,  # map col -> median value
     rng: Optional[np.random.Generator] = None,
 ) -> pl.Expr:
     """Construct a query from the attributes in a record."""
