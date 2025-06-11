@@ -84,17 +84,17 @@ def test_singling_out_queries():
         (
             pl.col("c3") == "fuffa",
             None,
-        ),  # missing column => _evaluate_queries returns None
+        ),  # missing column => _evaluate_queries throws an exception
         ((pl.col("c1") == 2) & (pl.col("c2") == "c"), 1),
     ],
 )
 def test_evaluate_queries(query, result):
     df = pl.DataFrame({"c1": [0, 0, 2], "c2": ["a", "a", "c"]})
-    out = _evaluate_queries(df=df, queries=[query])
-    if result is None:
-        assert out is None
-    else:
+    try:
+        out = _evaluate_queries(df=df, queries=[query])
         assert out[0] == result
+    except pl.exceptions.ColumnNotFoundError:
+        assert result is None
 
 
 def test_univariate_singling_out_queries():

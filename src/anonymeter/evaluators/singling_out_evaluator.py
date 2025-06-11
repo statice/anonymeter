@@ -2,10 +2,11 @@
 # Copyright (c) 2022 Anonos IP LLC.
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Privacy evaluator that measures the singling out risk."""
+
 import logging
 import operator
 from functools import reduce
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -45,7 +46,7 @@ def _query_from_record(
 
         elif dtypes[col].is_numeric():
             if medians is None:
-                op = rng_to_use.choice([operator.ge, operator.le])
+                op = rng_to_use.choice([operator.ge, operator.le]) #type: ignore[arg-type] # signature of "choice" does not accept a list of callables but works fine in practice
             else:
                 if val > medians[col]:
                     op = operator.ge
@@ -69,11 +70,11 @@ def _query_from_record(
     return expr
 
 
-def _random_operator(data_type: str, rng: np.random.Generator) -> str | Callable:
-    if data_type == "categorical":
-        ops = [operator.eq, operator.ne]
-    elif data_type == "boolean":
-        ops = ["identity", "not"]
+def _random_operator(
+    data_type: str, rng: np.random.Generator
+) -> Callable[[Any, Any], bool]:
+    if data_type in ["categorical", "boolean"]:
+        ops: Sequence[Callable[[Any, Any], bool]] = [operator.eq, operator.ne]
     elif data_type == "numerical":
         ops = [
             operator.eq,
@@ -86,7 +87,7 @@ def _random_operator(data_type: str, rng: np.random.Generator) -> str | Callable
     else:
         raise ValueError(f"Unknown `data_type`: {data_type}")
 
-    return rng.choice(ops)
+    return rng.choice(ops) #type: ignore[arg-type] # signature of "choice" does not accept a list of callables but works fine in practice
 
 
 def _random_query(
@@ -106,21 +107,22 @@ def _random_query(
 
         if val is None:
             # Null checks
-            if op == "identity":
+            if op == operator.eq:
                 e = pl.col(col).is_null()
             else:
                 e = ~pl.col(col).is_null()
         elif data_type == "boolean":
-            if op == "identity":
+            if op == operator.eq:
                 e = pl.col(col)
             else:
                 e = ~pl.col(col)
         else:
-            e = op(pl.col(col), val)
+            e = op(pl.col(col), val) #type: ignore[assignment] # mypy does not understand that applying "op" to a polars expression returns a polars expression
 
         exprs.append(e)
 
     return reduce(operator.and_, exprs)
+
 
 def _determine_data_type_for_random_query(dtype: pl.DataType) -> str:
     if dtype in (pl.Boolean,):
@@ -131,8 +133,12 @@ def _determine_data_type_for_random_query(dtype: pl.DataType) -> str:
         return "categorical"
     return "categorical"  # Fallback
 
+
 def _random_queries(
-    df: pl.DataFrame, n_queries: int, n_cols: int, rng: Optional[np.random.Generator] = None,
+    df: pl.DataFrame,
+    n_queries: int,
+    n_cols: int,
+    rng: Optional[np.random.Generator] = None,
 ) -> List[pl.Expr]:
     rng_to_use = rng_default if rng is None else rng
 
@@ -155,7 +161,9 @@ def _random_queries(
     return queries
 
 
-def singling_out_probability_integral(n: int, w_min: float, w_max: float) -> float:
+def singling_out_probability_integral(
+    n: int, w_min: float, w_max: float
+) -> float:
     """Integral of the singling out probability within a given range.
 
     The probability that a query singles out in a population of size
@@ -185,14 +193,18 @@ def singling_out_probability_integral(n: int, w_min: float, w_max: float) -> flo
 
     """
     if w_min < 0 or w_min > 1:
-        raise ValueError(f"Parameter `w_min` must be between 0 and 1. Got {w_min} instead.")
+        raise ValueError(
+            f"Parameter `w_min` must be between 0 and 1. Got {w_min} instead."
+        )
 
     if w_max < w_min or w_max > 1:
         raise ValueError(
             f"Parameter `w_max` must be greater than w_min ({w_min}) and smaller than 1. Got {w_max} instead."
         )
 
-    return ((n * w_min + 1) * (1 - w_min) ** n - (n * w_max + 1) * (1 - w_max) ** n) / (n + 1)
+    return (
+        (n * w_min + 1) * (1 - w_min) ** n - (n * w_max + 1) * (1 - w_max) ** n
+    ) / (n + 1)
 
 
 def _measure_queries_success(
@@ -216,9 +228,17 @@ def _model(x, w_eff, norm):
 def _fit_model(sizes: npt.NDArray, successes: npt.NDArray) -> Callable:
     # initial guesses
     w_eff_guess = 1 / np.max(sizes)
-    norm_guess = 1 / singling_out_probability_integral(n=np.max(sizes), w_min=0, w_max=w_eff_guess)
+    norm_guess = 1 / singling_out_probability_integral(
+        n=np.max(sizes), w_min=0, w_max=w_eff_guess
+    )
 
-    popt, _ = curve_fit(_model, xdata=sizes, ydata=successes, bounds=(0, (1, np.inf)), p0=(w_eff_guess, norm_guess))
+    popt, _ = curve_fit(
+        _model,
+        xdata=sizes,
+        ydata=successes,
+        bounds=(0, (1, np.inf)),
+        p0=(w_eff_guess, norm_guess),
+    )
 
     return lambda x: _model(x, *popt)
 
@@ -240,7 +260,9 @@ def fit_correction_term(df: pl.DataFrame, queries: List[pl.Expr]) -> Callable:
         depends on the size of the dataset.
 
     """
-    sizes, successes = _measure_queries_success(df=df, queries=queries, n_repeat=5, n_meas=10)
+    sizes, successes = _measure_queries_success(
+        df=df, queries=queries, n_repeat=5, n_meas=10
+    )
     return _fit_model(sizes=sizes, successes=successes)
 
 
@@ -252,7 +274,7 @@ class UniqueSinglingOutQueries:
         self._list: List[pl.Expr] = []
         self._max_size = max_size
 
-    def check_and_extend(self, queries: List[pl.Expr], counts: List[int]):
+    def check_and_extend(self, queries: List[pl.Expr], counts: Sequence[int]):
         """Add singling-out queries to the collection.
 
         Only queries that are not already in this collection can be added.
@@ -339,7 +361,7 @@ def univariate_singling_out_queries(
             queries.extend([pl.col(col) == val for val in rare_values])
 
     rng_to_use = rng_default if rng is None else rng
-    rng_to_use.shuffle(queries)
+    rng_to_use.shuffle(queries) #type: ignore[arg-type] # signature of "shuffle" does not accept a list of expressions but works fine in practice
     counts = _evaluate_queries(df=df, queries=queries)
 
     unique_so_queries = UniqueSinglingOutQueries(max_size=n_queries)
@@ -448,39 +470,36 @@ def multivariate_singling_out_queries(
 
 def _evaluate_queries(
     df: pl.DataFrame, queries: List[pl.Expr]
-) -> Optional[Tuple[int]]:
+) -> Tuple[int, ...]:
     if len(queries) == 0:
-        return []
+        return ()
 
-    try:
-        result_df = df.select(
-            [
-                q.cast(pl.Int64).sum().alias(f"count_{i}")
-                for i, q in enumerate(queries)
-            ]
-        )
-        counts = result_df.row(0)
-        return counts
+    result_df = df.select(
+        [
+            q.cast(pl.Int64).sum().alias(f"count_{i}")
+            for i, q in enumerate(queries)
+        ]
+    )
+    counts = result_df.row(0)
+    return counts
 
-    except Exception as e:
-        logger.debug(f"Query evaluation failed with {e}.")
-        return None
 
 def _evaluate_queries_and_return_successful(
     df: pl.DataFrame, queries: List[pl.Expr]
 ) -> List[pl.Expr]:
     counts = _evaluate_queries(df=df, queries=queries)
 
-    counts = np.array(counts, dtype=float)
+    counts_np = np.array(counts, dtype=float)
 
-    if np.any(np.isnan(counts)) > 0:
+    if np.any(np.isnan(counts_np)) > 0:
         logger.warning(
-            f"Found {np.sum(np.isnan(counts))} failed queries "
+            f"Found {np.sum(np.isnan(counts_np))} failed queries "
             f"out of {len(queries)}. Check DEBUG messages for more details."
         )
 
-    success = counts == 1
+    success = counts_np == 1
     return [q for iq, q in enumerate(queries) if success[iq]]
+
 
 def _generate_singling_out_queries(
     df: pl.DataFrame,
@@ -491,7 +510,9 @@ def _generate_singling_out_queries(
     rng: Optional[np.random.Generator] = None,
 ) -> List[pl.Expr]:
     if mode == "univariate":
-        queries = univariate_singling_out_queries(df=df, n_queries=n_attacks, rng=rng)
+        queries = univariate_singling_out_queries(
+            df=df, n_queries=n_attacks, rng=rng
+        )
 
     elif mode == "multivariate":
         queries = multivariate_singling_out_queries(
@@ -503,7 +524,9 @@ def _generate_singling_out_queries(
         )
 
     else:
-        raise RuntimeError(f"Parameter `mode` can be either `univariate` or `multivariate`. Got {mode} instead.")
+        raise RuntimeError(
+            f"Parameter `mode` can be either `univariate` or `multivariate`. Got {mode} instead."
+        )
 
     if len(queries) < n_attacks:
         logger.warning(
@@ -578,10 +601,10 @@ class SinglingOutEvaluator:
         self._n_attacks = n_attacks
         self._n_cols = n_cols
         if control is None:
-          self._control = None
+            self._control = None
         else:
-          control = pl.DataFrame(control)
-          self._control = control.unique(maintain_order=True)
+            control = pl.DataFrame(control)
+            self._control = control.unique(maintain_order=True)
         self._max_attempts = max_attempts
         self._queries: List[pl.Expr] = []
         self._random_queries: List[pl.Expr] = []
@@ -626,7 +649,9 @@ class SinglingOutEvaluator:
         elif mode == "univariate":
             n_cols = 1
         else:
-            raise ValueError(f"mode must be either 'multivariate' or 'univariate', got {mode} instead.")
+            raise ValueError(
+                f"mode must be either 'multivariate' or 'univariate', got {mode} instead."
+            )
 
         queries = _generate_singling_out_queries(
             df=self._syn,
@@ -636,7 +661,9 @@ class SinglingOutEvaluator:
             max_attempts=self._max_attempts,
             rng=self._rng,
         )
-        self._queries = _evaluate_queries_and_return_successful(df=self._ori, queries=queries)
+        self._queries = _evaluate_queries_and_return_successful(
+            df=self._ori, queries=queries
+        )
         self._n_success = len(self._queries)
 
         # if you can't generate enough, warn the user and proceed with what you have - should divide by the attacks you have, not what you wish you had!
@@ -649,21 +676,31 @@ class SinglingOutEvaluator:
             n_cols=n_cols,
             rng=self._rng,
         )
-        self._baseline_queries = _evaluate_queries_and_return_successful(df=self._ori, queries=baseline_queries)
+        self._baseline_queries = _evaluate_queries_and_return_successful(
+            df=self._ori, queries=baseline_queries
+        )
         self._n_baseline = len(self._baseline_queries)
 
         if self._control is None:
             self._n_control = None
         else:
-            self._n_control = len(_evaluate_queries_and_return_successful(df=self._control, queries=queries))
+            self._n_control = len(
+                _evaluate_queries_and_return_successful(
+                    df=self._control, queries=queries
+                )
+            )
 
             # correct the number of success against the control set
             # to account for different dataset sizes.
             if len(self._control) != len(self._ori):
                 # fit the model to the data:
-                fitted_model = fit_correction_term(df=self._control, queries=queries)
+                fitted_model = fit_correction_term(
+                    df=self._control, queries=queries
+                )
 
-                correction = fitted_model(len(self._ori)) / fitted_model(len(self._control))
+                correction = fitted_model(len(self._ori)) / fitted_model(
+                    len(self._control)
+                )
                 self._n_control *= correction
 
         self._evaluated = True
@@ -684,7 +721,9 @@ class SinglingOutEvaluator:
 
         """
         if not self._evaluated:
-            raise RuntimeError("The singling out evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
+            raise RuntimeError(
+                "The singling out evaluator wasn't evaluated yet. Please, run `evaluate()` first."
+            )
 
         return EvaluationResults(
             n_attacks=self._n_attacks,
@@ -694,7 +733,9 @@ class SinglingOutEvaluator:
             confidence_level=confidence_level,
         )
 
-    def risk(self, confidence_level: float = 0.95, baseline: bool = False) -> PrivacyRisk:
+    def risk(
+        self, confidence_level: float = 0.95, baseline: bool = False
+    ) -> PrivacyRisk:
         """Estimate the singling out risk.
 
         The risk is estimated comparing the number of successfull singling out
