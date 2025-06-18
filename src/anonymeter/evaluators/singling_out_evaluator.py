@@ -303,7 +303,7 @@ class UniqueSinglingOutQueries:
 
         counts = _evaluate_queries(df=df, queries=queries)
 
-        for query, count in zip(queries, counts, strict=True):
+        for query, count in zip(queries, counts):
             if count == 1:
                 query_str = str(query)
                 if query_str not in self._set:
