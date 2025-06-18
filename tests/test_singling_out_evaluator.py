@@ -28,7 +28,6 @@ def test_so_general(mode):
     )
 
     for q in soe.queries():
-        print(q)
         assert len(soe._syn.filter(q)) == 1
         assert len(soe._ori.filter(q)) == 1
 
@@ -40,11 +39,11 @@ def test_singling_out_queries_unique():
     q1 = pl.col("c1") == 1
     q2 = pl.col("c2") == 2
 
-    queries.check_and_extend([q1], _evaluate_queries(df=df, queries=[q1]))
-    queries.check_and_extend([q1], _evaluate_queries(df=df, queries=[q1]))
+    queries.check_and_extend(queries=[q1], df=df)
+    queries.check_and_extend(queries=[q1], df=df)
     assert [str(q) for q in queries.queries] == [str(q1)]
 
-    queries.check_and_extend([q2], _evaluate_queries(df=df, queries=[q2]))
+    queries.check_and_extend(queries=[q2], df=df)
     assert [str(q) for q in queries.queries] == [str(q1), str(q2)]
 
 
@@ -55,11 +54,11 @@ def test_singling_out_queries_same_characters():
     q1 = pl.col("c") == 1.2
     q2 = pl.col("c") == 2.1
 
-    queries.check_and_extend([q1], _evaluate_queries(df=df, queries=[q1]))
-    queries.check_and_extend([q1], _evaluate_queries(df=df, queries=[q1]))
+    queries.check_and_extend(queries=[q1], df=df)
+    queries.check_and_extend(queries=[q1], df=df)
     assert queries.queries == [q1]
 
-    queries.check_and_extend([q2], _evaluate_queries(df=df, queries=[q2]))
+    queries.check_and_extend(queries=[q2], df=df)
     assert queries.queries == [q1, q2]
 
 
@@ -68,12 +67,12 @@ def test_singling_out_queries():
 
     queries = UniqueSinglingOutQueries(max_size=2)
     q1 = pl.col("c1") == 1  # does NOT single out
-    queries.check_and_extend([q1], _evaluate_queries(df=df, queries=[q1]))
+    queries.check_and_extend(queries=[q1], df=df)
     assert len(queries) == 0
 
     q2 = (pl.col("c1") == 1) & (pl.col("c2") == 3)  # DOES single out
 
-    queries.check_and_extend([q2], _evaluate_queries(df=df, queries=[q2]))
+    queries.check_and_extend(queries=[q2], df=df)
     assert len(queries) == 1
 
 
@@ -99,7 +98,7 @@ def test_evaluate_queries(query, result):
 
 def test_univariate_singling_out_queries():
     df = pl.DataFrame({"col1": ["a", "b", "c", "d"]})
-    queries = univariate_singling_out_queries(df=df, n_queries=10)
+    queries = univariate_singling_out_queries(df=df, n_queries=10, rng=np.random.default_rng(0))
     expected_queries = [str(pl.col("col1") == v) for v in ["a", "b", "c", "d"]]
     assert sorted(map(str, queries)) == sorted(expected_queries)
 
@@ -107,7 +106,7 @@ def test_univariate_singling_out_queries():
 def test_singling_out_query_generator():
     df = pl.DataFrame({"c0": ["a", "b"], "c1": [1.23, 9.87]})
     queries = multivariate_singling_out_queries(
-        df=df, n_queries=2, n_cols=2, max_attempts=None
+        df=df, n_queries=2, n_cols=2, rng=np.random.default_rng(0), max_attempts=None
     )
     expected_exprs = [
         (pl.col("c1") <= 1.23) & (pl.col("c1") >= 9.87),
