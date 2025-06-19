@@ -96,11 +96,37 @@ def test_evaluate_queries(query, result):
         assert result is None
 
 
-def test_univariate_singling_out_queries():
-    df = pl.DataFrame({"col1": ["a", "b", "c", "d"]})
-    queries = univariate_singling_out_queries(df=df, n_queries=10, rng=np.random.default_rng(0))
-    expected_queries = [str(pl.col("col1") == v) for v in ["a", "b", "c", "d"]]
-    assert sorted(map(str, queries)) == sorted(expected_queries)
+@pytest.mark.parametrize(
+    "df",
+    [
+        pl.DataFrame({"col1": ["a", "b", "c", "d"]}),
+        pl.DataFrame({"col1": ["a", "b", "c", "d"], "col2": [None] * 4}),
+    ],
+    ids=["plain", "with_null_column"],
+)
+def test_univariate_singling_out_queries(df: pl.DataFrame):
+    queries = univariate_singling_out_queries(
+        df=df, n_queries=10, rng=np.random.default_rng(0)
+    )
+
+    expected = [str(pl.col("col1") == v) for v in ["a", "b", "c", "d"]]
+    assert sorted(map(str, queries)) == sorted(expected)
+
+
+def test_univariate_singling_out_queries_mixed_null_column():
+    df = pl.DataFrame({"col1": ["a", "b", "c", "d"], "col2": [2, 1, 3, None]})
+    queries = univariate_singling_out_queries(
+        df=df, n_queries=10, rng=np.random.default_rng(0)
+    )
+
+    expected = [str(pl.col("col1") == v) for v in ["a", "b", "c", "d"]] + \
+                [str(pl.col("col2") == v) for v in [1, 2, 3]] + \
+                [str(pl.col("col2") <= 1), str(pl.col("col2") >= 3),
+                 str(pl.col("col2").is_null())]
+
+    print(sorted(map(str, queries)))
+    print(sorted(expected))
+    assert sorted(map(str, queries)) == sorted(expected)
 
 
 def test_singling_out_query_generator():
