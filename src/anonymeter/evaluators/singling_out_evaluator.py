@@ -675,10 +675,6 @@ class SinglingOutEvaluator:
         )
         self._n_success = len(self._queries)
 
-        # if you can't generate enough, warn the user and proceed with what you have - should divide by the attacks you have, not what you wish you had!
-        if len(queries) < self._n_attacks:
-            self._n_attacks = len(queries)
-
         baseline_queries = _random_queries(
             df=self._syn,
             n_queries=self._n_attacks,
