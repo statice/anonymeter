@@ -27,6 +27,7 @@ dependencies = [
     "pandas>=1.4",
     "joblib~=1.2",
     "numba~=0.58",
+    "polars>=1.8",
 ]
 
 [project.optional-dependencies]
