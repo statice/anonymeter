@@ -181,3 +181,22 @@ def test_so_evaluator_max_attempts(max_attempts: int) -> None:
     soe.evaluate(mode="multivariate")
 
     assert len(soe.queries()) <= max_attempts
+
+
+@pytest.mark.parametrize("mode", ["univariate", "multivariate"])
+def test_so_weird_column_names(mode: str) -> None:
+    ori = pd.DataFrame(
+        {
+            "capital-gain": [100321.23, -2341.2, 4552.343],
+            "hr/week": [32, 48, 38],
+            "datetime": ["11:52", "06:00", "11:11"],
+        }
+    )
+
+    soe = SinglingOutEvaluator(
+        ori=ori,
+        syn=ori,
+        n_attacks=3,
+        n_cols=3,
+    )
+    soe.evaluate(mode=mode)
