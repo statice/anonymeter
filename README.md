@@ -37,7 +37,7 @@ description of the framework and the attack algorithms can be found in the paper
 
 ## Setup and installation
 
-`Anonymeter` requires Python 3.8.x, 3.9.x or 3.10.x installed. The simplest way to install `Anonymeter` is from `PyPi`. Simply run
+`Anonymeter` supports Python from 3.9 to 3.12. The simplest way to install `Anonymeter` is from `PyPi`. Simply run
 
 ```
 pip install anonymeter
