@@ -23,7 +23,7 @@ classifiers = [
 
 dependencies = [
     "scikit-learn~=1.2",
-    "numpy >=1.22",
+    "numpy >=1.22, <1.27", # capped to supprt pandas ~1.4
     "pandas>=1.4",
     "joblib~=1.2",
     "numba~=0.59",
