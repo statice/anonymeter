@@ -3,7 +3,7 @@
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Privacy evaluator that measures the inference risk."""
 
-from typing import List, Optional
+from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
@@ -17,7 +17,7 @@ def _run_attack(
     target: pd.DataFrame,
     syn: pd.DataFrame,
     n_attacks: int,
-    aux_cols: List[str],
+    aux_cols: list[str],
     secret: str,
     n_jobs: int,
     naive: bool,
@@ -149,7 +149,7 @@ class InferenceEvaluator:
         self,
         ori: pd.DataFrame,
         syn: pd.DataFrame,
-        aux_cols: List[str],
+        aux_cols: list[str],
         secret: str,
         regression: Optional[bool] = None,
         n_attacks: int = 500,

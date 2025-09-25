@@ -1,12 +1,11 @@
 # This file is part of Anonymeter and is released under BSD 3-Clause Clear License.
 # Copyright (c) 2022 Anonos IP LLC.
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
-from typing import Dict, List
 
 import pandas as pd
 
 
-def detect_col_types(df: pd.DataFrame) -> Dict[str, List[str]]:
+def detect_col_types(df: pd.DataFrame) -> dict[str, list[str]]:
     """Identify numerical and non-numerical columns in the dataframe.
 
     Parameters
@@ -21,8 +20,8 @@ def detect_col_types(df: pd.DataFrame) -> Dict[str, List[str]]:
         Values are lists of column names.
 
     """
-    num_cols: List[str] = list(df.select_dtypes("number").columns.values)
-    cat_cols: List[str] = [cn for cn in df.columns.values if cn not in num_cols]
+    num_cols: list[str] = list(df.select_dtypes("number").columns.values)
+    cat_cols: list[str] = [cn for cn in df.columns.values if cn not in num_cols]
 
     return {"num": sorted(num_cols), "cat": sorted(cat_cols)}
 

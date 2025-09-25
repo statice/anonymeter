@@ -3,7 +3,7 @@
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Privacy evaluator that measures the linkability risk."""
 import logging
-from typing import Dict, List, Optional, Set, Tuple, cast
+from typing import Optional, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -37,7 +37,7 @@ class LinkabilityIndexes:
         self._idx_0 = idx_0
         self._idx_1 = idx_1
 
-    def find_links(self, n_neighbors: int) -> Dict[int, Set[int]]:
+    def find_links(self, n_neighbors: int) -> dict[int, set[int]]:
         """Return synthetic records that link originals in the split datasets.
 
         Parameters
@@ -86,9 +86,9 @@ class LinkabilityIndexes:
         return _count_links(links)
 
 
-def _count_links(links: Dict[int, Set[int]]) -> int:
+def _count_links(links: dict[int, set[int]]) -> int:
     """Count links."""
-    linkable: Set[int] = set()
+    linkable: set[int] = set()
 
     for ori_idx in links:
         linkable = linkable | {ori_idx}
@@ -127,7 +127,7 @@ def _linkability_attack(
     ori: pd.DataFrame,
     syn: pd.DataFrame,
     n_attacks: int,
-    aux_cols: Tuple[List[str], List[str]],
+    aux_cols: tuple[list[str], list[str]],
     n_neighbors: int,
     n_jobs: int,
 ) -> LinkabilityIndexes:
@@ -185,7 +185,7 @@ class LinkabilityEvaluator:
         self,
         ori: pd.DataFrame,
         syn: pd.DataFrame,
-        aux_cols: Tuple[List[str], List[str]],
+        aux_cols: tuple[list[str], list[str]],
         n_attacks: Optional[int] = 500,
         n_neighbors: int = 1,
         control: Optional[pd.DataFrame] = None,

@@ -4,7 +4,7 @@
 """Nearest neighbor search for mixed type data."""
 import logging
 from math import fabs, isnan
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -76,7 +76,7 @@ def gower_distance(r0: npt.NDArray, r1: npt.NDArray, cat_cols_index: int) -> flo
 @jit(nopython=True, nogil=True)
 def _nearest_neighbors(
     queries: npt.NDArray, candidates: npt.NDArray, cat_cols_index: int, n_neighbors: int
-) -> Tuple[npt.NDArray[np.int64], npt.NDArray[np.float64]]:
+) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.float64]]:
     r"""For every element of ``queries``, find its nearest neighbors in ``candidates``.
 
     Parameters
@@ -147,7 +147,7 @@ class MixedTypeKNeighbors:
         self._n_neighbors = n_neighbors
         self._n_jobs = n_jobs
 
-    def fit(self, candidates: pd.DataFrame, ctypes: Optional[Dict[str, List[str]]] = None):
+    def fit(self, candidates: pd.DataFrame, ctypes: Optional[dict[str, list[str]]] = None):
         """Prepare for nearest neighbor search.
 
         Parameters
@@ -167,7 +167,7 @@ class MixedTypeKNeighbors:
 
     def kneighbors(
         self, queries: pd.DataFrame, n_neighbors: Optional[int] = None, return_distance: bool = False
-    ) -> Union[Tuple[npt.NDArray, npt.NDArray], npt.NDArray]:
+    ) -> Union[tuple[npt.NDArray, npt.NDArray], npt.NDArray]:
         """Find the nearest neighbors for a set of query points.
 
         Note

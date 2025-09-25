@@ -5,8 +5,9 @@
 
 import logging
 import operator
+from collections.abc import Sequence
 from functools import reduce
-from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Tuple, Union, cast
+from typing import Any, Callable, Optional, Union, cast
 
 import numpy as np
 import numpy.typing as npt
@@ -26,7 +27,7 @@ def _escape_quotes(string: str) -> str:
 def _query_from_record(
     record: dict,
     dtypes: dict,  # map col -> pl.DataType
-    columns: List[str],
+    columns: list[str],
     medians: dict,  # map col -> median value
     rng: np.random.Generator,
 ) -> pl.Expr:
@@ -92,9 +93,9 @@ def _random_operator(
 
 
 def _random_query(
-    unique_values: Dict[str, List[Any]],
-    cols: List[str],
-    column_types: Dict[str, str],
+    unique_values: dict[str, list[Any]],
+    cols: list[str],
+    column_types: dict[str, str],
     rng: np.random.Generator,
 ) -> pl.Expr:
     exprs = []
@@ -140,7 +141,7 @@ def _random_queries(
     n_queries: int,
     n_cols: int,
     rng: np.random.Generator,
-) -> List[pl.Expr]:
+) -> list[pl.Expr]:
     unique_values = {col: df[col].unique().to_list() for col in df.columns}
     column_types = {
         col: _convert_polars_dtype(df[col].dtype)
@@ -212,8 +213,8 @@ def singling_out_probability_integral(
 
 
 def _measure_queries_success(
-    df: pl.DataFrame, queries: List[pl.Expr], n_repeat: int, n_meas: int
-) -> Tuple[npt.NDArray, npt.NDArray]:
+    df: pl.DataFrame, queries: list[pl.Expr], n_repeat: int, n_meas: int
+) -> tuple[npt.NDArray, npt.NDArray]:
     sizes, successes = [], []
     min_rows = min(1000, len(df))
 
@@ -247,7 +248,7 @@ def _fit_model(sizes: npt.NDArray, successes: npt.NDArray) -> Callable:
     return lambda x: _model(x, *popt)
 
 
-def fit_correction_term(df: pl.DataFrame, queries: List[pl.Expr]) -> Callable:
+def fit_correction_term(df: pl.DataFrame, queries: list[pl.Expr]) -> Callable:
     """Fit correction for different size of the control dataset.
 
     Parameters
@@ -280,11 +281,11 @@ class UniqueSinglingOutQueries:
     """
 
     def __init__(self, max_size: Optional[int] = None):
-        self._set: Set[str] = set()
-        self._list: List[pl.Expr] = []
+        self._set: set[str] = set()
+        self._list: list[pl.Expr] = []
         self._max_size: Optional[int] = max_size
 
-    def check_and_extend(self, queries: List[pl.Expr], df: pl.DataFrame):
+    def check_and_extend(self, queries: list[pl.Expr], df: pl.DataFrame):
         """Add singling-out queries to the collection.
 
         Only queries that are not already in this collection can be added.
@@ -317,14 +318,14 @@ class UniqueSinglingOutQueries:
         return len(self._list)
 
     @property
-    def queries(self) -> List[pl.Expr]:
+    def queries(self) -> list[pl.Expr]:
         """Queries that are present in the collection."""
         return self._list
 
 
 def univariate_singling_out_queries(
     df: pl.DataFrame, n_queries: int, rng: np.random.Generator
-) -> List[pl.Expr]:
+) -> list[pl.Expr]:
     """Generate singling out queries from rare attributes.
 
     Parameters
@@ -388,7 +389,7 @@ def multivariate_singling_out_queries(
     max_attempts: Optional[int],
     rng: np.random.Generator,
     batch_size: int = 1000,
-) -> List[pl.Expr]:
+) -> list[pl.Expr]:
     """Generates singling out queries from a combination of attributes.
 
     Parameters
@@ -478,8 +479,8 @@ def multivariate_singling_out_queries(
 
 
 def _evaluate_queries(
-    df: pl.DataFrame, queries: List[pl.Expr]
-) -> Tuple[int, ...]:
+    df: pl.DataFrame, queries: list[pl.Expr]
+) -> tuple[int, ...]:
     if len(queries) == 0:
         return ()
 
@@ -494,8 +495,8 @@ def _evaluate_queries(
 
 
 def _evaluate_queries_and_return_successful(
-    df: pl.DataFrame, queries: List[pl.Expr]
-) -> List[pl.Expr]:
+    df: pl.DataFrame, queries: list[pl.Expr]
+) -> list[pl.Expr]:
     counts = _evaluate_queries(df=df, queries=queries)
 
     counts_np = np.array(counts, dtype=float)
@@ -517,7 +518,7 @@ def _generate_singling_out_queries(
     n_cols: int,
     max_attempts: Optional[int],
     rng: np.random.Generator,
-) -> List[pl.Expr]:
+) -> list[pl.Expr]:
     if mode == "univariate":
         queries = univariate_singling_out_queries(
             df=df, n_queries=n_attacks, rng=rng
@@ -615,12 +616,12 @@ class SinglingOutEvaluator:
             control = pl.DataFrame(control)
             self._control = control.unique(maintain_order=True)
         self._max_attempts = max_attempts
-        self._queries: List[pl.Expr] = []
-        self._random_queries: List[pl.Expr] = []
+        self._queries: list[pl.Expr] = []
+        self._random_queries: list[pl.Expr] = []
         self._evaluated = False
         self._rng = np.random.default_rng() if seed is None else np.random.default_rng(seed)
 
-    def queries(self, baseline: bool = False) -> List[pl.Expr]:
+    def queries(self, baseline: bool = False) -> list[pl.Expr]:
         """Successful singling out queries.
 
         Parameters
