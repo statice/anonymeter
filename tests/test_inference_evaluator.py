@@ -1,7 +1,7 @@
 # This file is part of Anonymeter and is released under BSD 3-Clause Clear License.
 # Copyright (c) 2022 Anonos IP LLC.
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
-from typing import Iterable
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd

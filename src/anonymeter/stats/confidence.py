@@ -5,7 +5,7 @@
 
 import warnings
 from math import sqrt
-from typing import NamedTuple, Optional, Tuple
+from typing import NamedTuple, Optional
 
 from scipy.stats import norm
 
@@ -23,7 +23,7 @@ class PrivacyRisk(NamedTuple):
     """
 
     value: float
-    ci: Tuple[float, float]
+    ci: tuple[float, float]
 
 
 class SuccessRate(NamedTuple):
