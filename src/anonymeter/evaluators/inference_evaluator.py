@@ -3,11 +3,12 @@
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Privacy evaluator that measures the inference risk."""
 
-from typing import Optional
+from typing import Optional, Union, Tuple, Any
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from pandas import DataFrame
 
 from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors
 from anonymeter.stats.confidence import EvaluationResults, PrivacyRisk
@@ -22,25 +23,40 @@ def _run_attack(
     n_jobs: int,
     naive: bool,
     regression: Optional[bool],
-) -> int:
+    ml_model: Optional[Any],
+    sample_attacks: bool,
+) -> tuple[int, Union[Tuple[npt.NDArray, npt.NDArray], npt.NDArray, None], DataFrame]:
     if regression is None:
         regression = pd.api.types.is_numeric_dtype(target[secret])
 
-    targets = target.sample(n_attacks, replace=False)
+    # We only sample if `ml_model` is set to None, i.e MixedTypeKNeighbors is used,
+    # or `sample_attacks` is set to True by default.
+    if ml_model is None or sample_attacks:
+        targets = target.sample(n_attacks, replace=False)
+    else:
+        # When an `ml_model` is passed we don't want to sample, but rather predict for all targets
+        # as we assume it can scale to all target samples, better rather than using MixedTypeKNeighbors
+        targets = target
 
     if naive:
         guesses = syn.sample(n_attacks)[secret]
-
+        targets = target.sample(n_attacks, replace=False) # we need this after dropping nans in the synthetic data
     else:
-        nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=1).fit(candidates=syn[aux_cols])
+        if ml_model is not None:
+            guesses = ml_model.predict(targets)
+        else:
+            nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=1).fit(candidates=syn[aux_cols])
+            guesses_idx = nn.kneighbors(queries=targets[aux_cols])
+            if isinstance(guesses_idx, tuple):
+                raise RuntimeError("guesses_idx cannot be a tuple")
 
-        guesses_idx = nn.kneighbors(queries=targets[aux_cols])
-        if isinstance(guesses_idx, tuple):
-            raise RuntimeError("guesses_idx cannot be a tuple")
+            guesses = syn.iloc[guesses_idx.flatten()][secret]
 
-        guesses = syn.iloc[guesses_idx.flatten()][secret]
+    assert len(guesses) == len(targets), "Predictions and targets have different lengths"
+    guesses.index = targets.index
 
-    return evaluate_inference_guesses(guesses=guesses, secrets=targets[secret], regression=regression).sum()
+    return evaluate_inference_guesses(guesses=guesses, secrets=targets[secret],
+                                      regression=regression).sum(), guesses, targets
 
 
 def evaluate_inference_guesses(
@@ -142,6 +158,13 @@ class InferenceEvaluator:
         the variable.
     n_attacks : int, default is 500
         Number of attack attempts.
+    ml_model: Any
+        An ml model fitted on `syn` as training data, and `secret` as target, that supports ::predict(x).
+        If not None, it will be used over the MixedTypeKNeighbors in the attack.
+    sample_attacks: bool, optional
+        Specifies whether we should sample `n_attacks` samples from the `ori` or `control` dataset
+        in the attack phase. When a custom `ml_model` is being passed which can scale to more attacks,
+        `sample_attacks` can be set to False so that we predict the values for all samples in `ori` and `control`.
 
     """
 
@@ -154,11 +177,23 @@ class InferenceEvaluator:
         regression: Optional[bool] = None,
         n_attacks: int = 500,
         control: Optional[pd.DataFrame] = None,
+        ml_model: Optional[Any] = None,
+        sample_attacks: Optional[bool] = True,
     ):
         self._ori = ori
         self._syn = syn
         self._control = control
         self._n_attacks = n_attacks
+        self._ml_model = ml_model
+        self._sample_attacks = sample_attacks
+        if not self._sample_attacks:
+            self._n_attacks_ori = self._ori.shape[0]
+            self._n_attacks_baseline = min(self._syn.shape[0], self._n_attacks_ori)
+            self._n_attacks_control = self._control.shape[0]
+        else:
+            self._n_attacks_ori = self._n_attacks
+            self._n_attacks_baseline = self._n_attacks
+            self._n_attacks_control = self._n_attacks
 
         # check if secret is a string column
         if not isinstance(secret, str):
@@ -172,17 +207,22 @@ class InferenceEvaluator:
         self._regression = regression
         self._aux_cols = aux_cols
         self._evaluated = False
+        self._data_groups = self._ori[self._secret].unique().tolist()
 
-    def _attack(self, target: pd.DataFrame, naive: bool, n_jobs: int) -> int:
+    def _attack(self, target: pd.DataFrame, naive: bool, n_jobs: int, n_attacks: int) -> tuple[
+        int, Union[Tuple[npt.NDArray, npt.NDArray],
+        pd.Series, None], DataFrame]:
         return _run_attack(
             target=target,
             syn=self._syn,
-            n_attacks=self._n_attacks,
+            n_attacks=n_attacks,
             aux_cols=self._aux_cols,
             secret=self._secret,
             n_jobs=n_jobs,
             naive=naive,
             regression=self._regression,
+            ml_model=self._ml_model,
+            sample_attacks=self._sample_attacks
         )
 
     def evaluate(self, n_jobs: int = -2) -> "InferenceEvaluator":
@@ -199,10 +239,17 @@ class InferenceEvaluator:
             The evaluated ``InferenceEvaluator`` object.
 
         """
-        self._n_baseline = self._attack(target=self._ori, naive=True, n_jobs=n_jobs)
-        self._n_success = self._attack(target=self._ori, naive=False, n_jobs=n_jobs)
-        self._n_control = (
-            None if self._control is None else self._attack(target=self._control, naive=False, n_jobs=n_jobs)
+        # n_attacks is effective here
+        self._n_baseline, _, _ = self._attack(target=self._ori, naive=True, n_jobs=n_jobs,
+                                              n_attacks=self._n_attacks_baseline)
+
+        # n_attacks is not effective here, just needed for the baseline
+        self._n_success, self.guesses_success, self.target = self._attack(target=self._ori, naive=False, n_jobs=n_jobs,
+                                                                          n_attacks=self._n_attacks_ori)
+        # n_attacks is not effective here, just needed for the baseline
+        self._n_control, self.guesses_control, self.target_control = (
+            None if self._control is None else self._attack(target=self._control, naive=False, n_jobs=n_jobs,
+                                                            n_attacks=self._n_attacks_control)
         )
 
         self._evaluated = True
@@ -227,6 +274,9 @@ class InferenceEvaluator:
 
         return EvaluationResults(
             n_attacks=self._n_attacks,
+            n_attacks_ori=self._n_attacks_ori,
+            n_attacks_baseline=self._n_attacks_baseline,
+            n_attacks_control=self._n_attacks_control,
             n_success=self._n_success,
             n_baseline=self._n_baseline,
             n_control=self._n_control,
@@ -258,3 +308,80 @@ class InferenceEvaluator:
         """
         results = self.results(confidence_level=confidence_level)
         return results.risk(baseline=baseline)
+
+    def risk_for_groups(self, confidence_level: float = 0.95) -> dict[
+        str, dict[str, Union[EvaluationResults, PrivacyRisk]]]:
+        """Compute the attack risks on a group level, for every unique value of `self._data_groups`.
+
+            Parameters
+            ----------
+            confidence_level : float, default is 0.95
+                Confidence level for the error bound calculation.
+
+            Returns
+            -------
+            dict[str, dict[str, EvaluationResults | PrivacyRisk]]
+                The group as a key, and then for every group the results (EvaluationResults),
+                and the risks (PrivacyRisk).
+
+            """
+        if not self._evaluated:
+            self.evaluate(n_jobs=-2)
+
+        all_results = {}
+
+        # For every unique group in `self._data_groups`
+        for group in self._data_groups:
+            # Get the targets for the current group
+            target = self.target[self.target[self._secret] == group]
+
+            assert len(self.guesses_success) == len(self.target)
+            assert (self.guesses_success.index == self.target.index).all()
+
+            # Get the guesses for the current group
+            guess = self.guesses_success.loc[target.index]
+
+            # Count the number of success attacks
+            n_success = evaluate_inference_guesses(guesses=guess,
+                                                   secrets=target[self._secret],
+                                                   regression=self._regression).sum()
+
+            if self._control is not None:
+                # Get the targets for the current control group
+                target_control = self.target_control[self.target_control[self._secret] == group]
+
+
+                assert len(self.guesses_control) == len(self.target_control)
+                assert (self.guesses_control.index == self.target_control.index).all()
+
+                # Get the guesses for the current control group
+                guesses_control = self.guesses_control.loc[target_control.index]
+
+                # Count the number of success control attacks
+                n_control = evaluate_inference_guesses(guesses=guesses_control,
+                                                        secrets=target_control[self._secret],
+                                                        regression=self._regression).sum()
+            else:
+                n_control = None
+
+            # Recreate the EvaluationResults for the current group
+            results = EvaluationResults(
+                n_attacks=self._n_attacks,  # passing for
+                n_attacks_ori=self._n_attacks_ori,
+                n_attacks_baseline=self._n_attacks_baseline,
+                # We leave the overall n_attacks_baseline here, it doesn't change the risk
+                n_attacks_control=self._n_attacks_control,
+                n_success=n_success,
+                n_baseline=self._n_baseline,  # We leave the overall _n_baseline here, it doesn't change the risk
+                n_control=n_control,
+                confidence_level=confidence_level,
+            )
+            # Compute the risk
+            risk = results.risk()
+
+            all_results[group] = {
+                "results": results,
+                "risk": risk
+            }
+
+        return all_results
