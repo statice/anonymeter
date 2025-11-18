@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         # We test only the minimum and the maximum supported versions of python
-        python-version: ["3.9", "3.12"]
+        python-version: ["3.9", "3.13"]
         pandas-version: ["1.4", "2.1"]
 
     steps:
