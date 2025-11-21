@@ -5,5 +5,6 @@
 from anonymeter.evaluators.inference_evaluator import InferenceEvaluator
 from anonymeter.evaluators.linkability_evaluator import LinkabilityEvaluator
 from anonymeter.evaluators.singling_out_evaluator import SinglingOutEvaluator
+from anonymeter.evaluators.inference_predictor import KNNInference, MLModelInference
 
-__all__ = ["InferenceEvaluator", "LinkabilityEvaluator", "SinglingOutEvaluator"]
+__all__ = ["InferenceEvaluator", "LinkabilityEvaluator", "SinglingOutEvaluator", "KNNInference", "MLModelInference"]
