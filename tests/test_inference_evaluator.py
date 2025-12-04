@@ -72,9 +72,9 @@ def test_evaluate_inference_guesses_regression_tolerance(guesses, secrets, toler
     ],
 )
 def test_inference_evaluator_rates(
-    ori: Iterable,
-    syn: Iterable,
-    expected: float,
+        ori: Iterable,
+        syn: Iterable,
+        expected: float,
 ):
     # created a dataframe from ori and name columns c0 and c1
     ori = pd.DataFrame(ori, columns=pd.Index(["c0", "c1"]))

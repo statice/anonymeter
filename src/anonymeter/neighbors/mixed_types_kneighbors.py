@@ -12,6 +12,7 @@ import pandas as pd
 from joblib import Parallel, delayed
 from numba import jit
 
+from anonymeter.evaluators.inference_predictor import InferencePredictor
 from anonymeter.preprocessing.transformations import mixed_types_transform
 from anonymeter.preprocessing.type_detection import detect_consistent_col_types
 
@@ -75,7 +76,7 @@ def gower_distance(r0: npt.NDArray, r1: npt.NDArray, cat_cols_index: int) -> flo
 
 @jit(nopython=True, nogil=True)
 def _nearest_neighbors(
-    queries: npt.NDArray, candidates: npt.NDArray, cat_cols_index: int, n_neighbors: int
+        queries: npt.NDArray, candidates: npt.NDArray, cat_cols_index: int, n_neighbors: int
 ) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.float64]]:
     r"""For every element of ``queries``, find its nearest neighbors in ``candidates``.
 
@@ -166,7 +167,7 @@ class MixedTypeKNeighbors:
         return self
 
     def kneighbors(
-        self, queries: pd.DataFrame, n_neighbors: Optional[int] = None, return_distance: bool = False
+            self, queries: pd.DataFrame, n_neighbors: Optional[int] = None, return_distance: bool = False
     ) -> Union[tuple[npt.NDArray, npt.NDArray], npt.NDArray]:
         """Find the nearest neighbors for a set of query points.
 
@@ -220,7 +221,7 @@ class MixedTypeKNeighbors:
         with Parallel(n_jobs=self._n_jobs, backend="threading") as executor:
             res = executor(
                 delayed(_nearest_neighbors)(
-                    queries=queries[ii : ii + 1],
+                    queries=queries[ii: ii + 1],
                     candidates=candidates,
                     cat_cols_index=len(self._ctypes["num"]),
                     n_neighbors=n_neighbors,
@@ -235,3 +236,46 @@ class MixedTypeKNeighbors:
             return distances, indexes
 
         return indexes
+
+
+class KNNInferencePredictor(InferencePredictor):
+    """Wrapper class to use MixedTypeKNeighbors in the inference evaluator.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The train data to fit the model on (usually the synthetic data).
+    columns : list[str]
+        The auxiliary columns of `data`, used as input to the model.
+    target_col : str
+        The target column of `data`.
+    n_jobs : int, default is -2
+        Number of jobs to use. It follows joblib convention, so that ``n_jobs = -1``
+        means all available cores
+
+    """
+
+    def __init__(self, data: pd.DataFrame, columns: list[str], target_col: str, n_jobs: int):
+        self._nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=1).fit(candidates=data[columns])
+        self._data = data
+        self._target_col = target_col
+        self._columns = columns
+
+    def predict(self, x: pd.DataFrame) -> pd.Series:
+        """Predict the targets for input `x`.
+
+        Parameters
+        ----------
+        x : pd.DataFrame
+            The input data to predict.
+
+        Returns
+        -------
+        pd.Series
+            The predictions as pd.Series.
+
+        """
+        guesses_idx = self._nn.kneighbors(queries=x[self._columns])
+        if isinstance(guesses_idx, tuple):
+            raise RuntimeError("guesses_idx cannot be a tuple")
+        return self._data.iloc[guesses_idx.flatten()][self._target_col]
