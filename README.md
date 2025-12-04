@@ -159,4 +159,3 @@ This `bibtex` entry can be used to refer to the paper:
 ### License
 
 Licensed under Clear BSD License, see `LICENSE.md` to see the full license text. Patent-pending code (application US-20230401336-A1).
-
