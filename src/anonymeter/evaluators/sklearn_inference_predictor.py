@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, is_classifier, is_regressor
 
@@ -14,6 +13,7 @@ class SklearnInferencePredictor(InferencePredictor):
         A classifier or regressor which implements ::predict().
 
     """
+
     def __init__(self, model: BaseEstimator):
         if not (is_classifier(estimator=model) or is_regressor(estimator=model)):
             raise ValueError("Model must be classifier or regressor %s", model)
@@ -36,6 +36,4 @@ class SklearnInferencePredictor(InferencePredictor):
 
         """
         prediction = self._model.predict(x)
-        if isinstance(prediction, np.ndarray):
-            return pd.Series(prediction)
-        return prediction
+        return pd.Series(prediction, index=x.index)

@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 from anonymeter.evaluators.inference_evaluator import InferenceEvaluator, evaluate_inference_guesses
+from anonymeter.stats.confidence import EvaluationResults
 
 from tests.fixtures import get_adult
 
@@ -104,7 +105,10 @@ def test_inference_evaluator_rates(
 @pytest.mark.parametrize("secret", ["education", "marital", "capital_gain"])
 def test_inference_evaluator_leaks(aux_cols, secret):
     ori = get_adult("ori", n_samples=10)
-    evaluator = InferenceEvaluator(ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=10)
+    ori = ori.drop_duplicates(subset=aux_cols)
+    evaluator = InferenceEvaluator(
+        ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=ori.shape[0]
+    )
     evaluator.evaluate(n_jobs=1)
     results = evaluator.results(confidence_level=0)
 
@@ -123,3 +127,27 @@ def test_evaluator_not_evaluated():
     )
     with pytest.raises(RuntimeError):
         evaluator.risk()
+
+
+@pytest.mark.parametrize(
+    "aux_cols",
+    [
+        ["type_employer", "capital_loss", "hr_per_week", "age"],
+        ["education_num", "marital", "capital_loss"],
+    ],
+)
+@pytest.mark.parametrize("secret", ["education", "marital"])
+def test_inference_evaluator_group_wise(aux_cols, secret):
+    ori = get_adult("ori", n_samples=10)
+    ori = ori.drop_duplicates(subset=aux_cols)
+    evaluator = InferenceEvaluator(
+        ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=ori.shape[0]
+    )
+    evaluator.evaluate(n_jobs=1)
+
+    group_wise = evaluator.risk_for_groups(confidence_level=0)
+
+    for _, res in group_wise.items():
+        results: EvaluationResults = res[0]
+        np.testing.assert_equal(results.attack_rate, (1, 0))
+        np.testing.assert_equal(results.control_rate, (1, 0))
