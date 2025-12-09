@@ -2,26 +2,27 @@
 # Copyright (c) 2022 Anonos IP LLC.
 # See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
 """Privacy evaluator that measures the inference risk."""
-
 from typing import Optional
 
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
-from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors
+from anonymeter.evaluators.inference_predictor import InferencePredictor
+from anonymeter.neighbors.mixed_types_kneighbors import KNNInferencePredictor
 from anonymeter.stats.confidence import EvaluationResults, PrivacyRisk
 
 
 def _run_attack(
-    target: pd.DataFrame,
-    syn: pd.DataFrame,
-    n_attacks: int,
-    aux_cols: list[str],
-    secret: str,
-    n_jobs: int,
-    naive: bool,
-    regression: Optional[bool],
+        target: pd.DataFrame,
+        syn: pd.DataFrame,
+        n_attacks: int,
+        aux_cols: list[str],
+        secret: str,
+        n_jobs: int,
+        naive: bool,
+        regression: Optional[bool],
+        inference_model: Optional[InferencePredictor],
 ) -> int:
     if regression is None:
         regression = pd.api.types.is_numeric_dtype(target[secret])
@@ -30,21 +31,17 @@ def _run_attack(
 
     if naive:
         guesses = syn.sample(n_attacks)[secret]
-
     else:
-        nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=1).fit(candidates=syn[aux_cols])
-
-        guesses_idx = nn.kneighbors(queries=targets[aux_cols])
-        if isinstance(guesses_idx, tuple):
-            raise RuntimeError("guesses_idx cannot be a tuple")
-
-        guesses = syn.iloc[guesses_idx.flatten()][secret]
+        # Instantiate the default KNN model if no other model is passed through `inference_model`.
+        if inference_model is None:
+            inference_model = KNNInferencePredictor(data=syn, columns=aux_cols, target_col=secret, n_jobs=n_jobs)
+        guesses = inference_model.predict(targets)
 
     return evaluate_inference_guesses(guesses=guesses, secrets=targets[secret], regression=regression).sum()
 
 
 def evaluate_inference_guesses(
-    guesses: pd.Series, secrets: pd.Series, regression: bool, tolerance: float = 0.05
+        guesses: pd.Series, secrets: pd.Series, regression: bool, tolerance: float = 0.05
 ) -> npt.NDArray:
     """Evaluate the success of an inference attack.
 
@@ -142,23 +139,33 @@ class InferenceEvaluator:
         the variable.
     n_attacks : int, default is 500
         Number of attack attempts.
+        In case the whole dataset size should be used, set this to np.inf.
+    inference_model: InferencePredictor
+        An ml model fitted on `syn` as training data, and `secret` as target, that supports ::predict(x).
+        If not None, it will be used over the MixedTypeKNeighbors in the attack.
 
     """
 
     def __init__(
-        self,
-        ori: pd.DataFrame,
-        syn: pd.DataFrame,
-        aux_cols: list[str],
-        secret: str,
-        regression: Optional[bool] = None,
-        n_attacks: int = 500,
-        control: Optional[pd.DataFrame] = None,
+            self,
+            ori: pd.DataFrame,
+            syn: pd.DataFrame,
+            aux_cols: list[str],
+            secret: str,
+            regression: Optional[bool] = None,
+            n_attacks: int = 500,
+            control: Optional[pd.DataFrame] = None,
+            inference_model: Optional[InferencePredictor] = None
     ):
         self._ori = ori
         self._syn = syn
         self._control = control
         self._n_attacks = n_attacks
+        self._inference_model = inference_model
+
+        self._n_attacks_ori = min(n_attacks, self._ori.shape[0])
+        self._n_attacks_baseline = min(self._syn.shape[0], self._n_attacks_ori)
+        self._n_attacks_control = -1 if self._control is None else min(n_attacks, self._control.shape[0])
 
         # check if secret is a string column
         if not isinstance(secret, str):
@@ -173,16 +180,17 @@ class InferenceEvaluator:
         self._aux_cols = aux_cols
         self._evaluated = False
 
-    def _attack(self, target: pd.DataFrame, naive: bool, n_jobs: int) -> int:
+    def _attack(self, target: pd.DataFrame, naive: bool, n_jobs: int, n_attacks: int) -> int:
         return _run_attack(
             target=target,
             syn=self._syn,
-            n_attacks=self._n_attacks,
+            n_attacks=n_attacks,
             aux_cols=self._aux_cols,
             secret=self._secret,
             n_jobs=n_jobs,
             naive=naive,
             regression=self._regression,
+            inference_model=self._inference_model,
         )
 
     def evaluate(self, n_jobs: int = -2) -> "InferenceEvaluator":
@@ -199,11 +207,14 @@ class InferenceEvaluator:
             The evaluated ``InferenceEvaluator`` object.
 
         """
-        self._n_baseline = self._attack(target=self._ori, naive=True, n_jobs=n_jobs)
-        self._n_success = self._attack(target=self._ori, naive=False, n_jobs=n_jobs)
+        self._n_baseline = self._attack(target=self._ori, naive=True, n_jobs=n_jobs,
+                                        n_attacks=self._n_attacks_baseline)
+        self._n_success = self._attack(target=self._ori, naive=False, n_jobs=n_jobs,
+                                       n_attacks=self._n_attacks_ori)
         self._n_control = (
-            None if self._control is None else self._attack(target=self._control, naive=False, n_jobs=n_jobs)
-        )
+            None if self._control is None else self._attack(target=self._control, naive=False, n_jobs=n_jobs,
+                                                            n_attacks=self._n_attacks_control)
+            )
 
         self._evaluated = True
         return self
@@ -226,7 +237,7 @@ class InferenceEvaluator:
             raise RuntimeError("The inference evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
 
         return EvaluationResults(
-            n_attacks=self._n_attacks,
+            n_attacks=(self._n_attacks_ori, self._n_attacks_baseline, self._n_attacks_control),
             n_success=self._n_success,
             n_baseline=self._n_baseline,
             n_control=self._n_control,

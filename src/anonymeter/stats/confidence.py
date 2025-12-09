@@ -5,7 +5,7 @@
 
 import warnings
 from math import sqrt
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Union
 
 from scipy.stats import norm
 
@@ -174,8 +174,12 @@ class EvaluationResults:
 
     Parameters
     ----------
-    n_attacks : int
+    n_attacks : Union[int, tuple[int, int, int]]
         Total number of attacks performed.
+        It can be a single number (int) which will apply to all three: main (ori), baseline, and control attack,
+        or a tuple (n_attacks_ori, n_attacks_baseline, n_attacks_control) - (int, int, int) which will contain
+        different numbers of attacks in case the user wants to perform different number of attacks for each
+        main (ori), baseline and control target dataset.
     n_success : int
         Number of successful attacks.
     n_baseline : int
@@ -194,23 +198,31 @@ class EvaluationResults:
 
     def __init__(
         self,
-        n_attacks: int,
+        n_attacks: Union[int, tuple[int, int, int]],
         n_success: int,
         n_baseline: int,
         n_control: Optional[int] = None,
         confidence_level: float = 0.95,
     ):
-        self.attack_rate = success_rate(n_total=n_attacks, n_success=n_success, confidence_level=confidence_level)
+        if isinstance(n_attacks, int):
+            self.n_attacks_ori = n_attacks
+            self.n_attacks_baseline = n_attacks
+            self.n_attacks_control = n_attacks
+        elif isinstance(n_attacks, tuple):
+            self.n_attacks_ori, self.n_attacks_baseline, self.n_attacks_control = n_attacks
+        else:
+            raise ValueError(f"n_attacks must be an integer or a tuple of three integers, got {n_attacks}")
 
-        self.baseline_rate = success_rate(n_total=n_attacks, n_success=n_baseline, confidence_level=confidence_level)
+        self.attack_rate = success_rate(n_total=self.n_attacks_ori, n_success=n_success, confidence_level=confidence_level)
+
+        self.baseline_rate = success_rate(n_total=self.n_attacks_baseline, n_success=n_baseline, confidence_level=confidence_level)
 
         self.control_rate = (
             None
             if n_control is None
-            else success_rate(n_total=n_attacks, n_success=n_control, confidence_level=confidence_level)
+            else success_rate(n_total=self.n_attacks_control, n_success=n_control, confidence_level=confidence_level)
         )
 
-        self.n_attacks = n_attacks
         self.n_success = n_success
         self.n_baseline = n_baseline
         self.n_control = n_control
