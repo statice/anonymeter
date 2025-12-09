@@ -1,4 +1,7 @@
-import numpy as np
+# This file is part of Anonymeter and is released under BSD 3-Clause Clear License.
+# Copyright (c) 2022 Anonos IP LLC.
+# See https://github.com/statice/anonymeter/blob/main/LICENSE.md for details.
+"""A wrapper class around a sklearn model implementing the InferencePredictor."""
 import pandas as pd
 from sklearn.base import BaseEstimator, is_classifier, is_regressor
 
@@ -12,6 +15,8 @@ class SklearnInferencePredictor(InferencePredictor):
     ----------
     model : sklearn.base.BaseEstimator
         A classifier or regressor which implements ::predict().
+        The model needs to be fitted, it must contain its own preprocessing pipeline,
+        and it needs to respect the index of the input data.
 
     """
     def __init__(self, model: BaseEstimator):
@@ -36,6 +41,4 @@ class SklearnInferencePredictor(InferencePredictor):
 
         """
         prediction = self._model.predict(x)
-        if isinstance(prediction, np.ndarray):
-            return pd.Series(prediction)
-        return prediction
+        return pd.Series(prediction, index=x.index)

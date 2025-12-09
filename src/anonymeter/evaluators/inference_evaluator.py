@@ -27,15 +27,14 @@ def _run_attack(
     if regression is None:
         regression = pd.api.types.is_numeric_dtype(target[secret])
 
+    targets = target.sample(n_attacks, replace=False)
+
     if naive:
         guesses = syn.sample(n_attacks)[secret]
-        targets = target.sample(n_attacks, replace=False)
     else:
         # Instantiate the default KNN model if no other model is passed through `inference_model`.
         if inference_model is None:
             inference_model = KNNInferencePredictor(data=syn, columns=aux_cols, target_col=secret, n_jobs=n_jobs)
-
-        targets = target.sample(n_attacks, replace=False)
         guesses = inference_model.predict(targets)
 
     return evaluate_inference_guesses(guesses=guesses, secrets=targets[secret], regression=regression).sum()
@@ -140,6 +139,7 @@ class InferenceEvaluator:
         the variable.
     n_attacks : int, default is 500
         Number of attack attempts.
+        In case the whole dataset size should be used, set this to np.inf.
     inference_model: InferencePredictor
         An ml model fitted on `syn` as training data, and `secret` as target, that supports ::predict(x).
         If not None, it will be used over the MixedTypeKNeighbors in the attack.
@@ -165,10 +165,7 @@ class InferenceEvaluator:
 
         self._n_attacks_ori = min(n_attacks, self._ori.shape[0])
         self._n_attacks_baseline = min(self._syn.shape[0], self._n_attacks_ori)
-        if self._control is None:
-            self._n_attacks_control = -1
-        else:
-            self._n_attacks_control = min(n_attacks, self._control.shape[0])
+        self._n_attacks_control = -1 if self._control is None else min(n_attacks, self._control.shape[0])
 
         # check if secret is a string column
         if not isinstance(secret, str):
@@ -210,14 +207,10 @@ class InferenceEvaluator:
             The evaluated ``InferenceEvaluator`` object.
 
         """
-        # n_attacks is effective here
         self._n_baseline = self._attack(target=self._ori, naive=True, n_jobs=n_jobs,
                                         n_attacks=self._n_attacks_baseline)
-
-        # n_attacks is not effective here, just needed for the baseline
         self._n_success = self._attack(target=self._ori, naive=False, n_jobs=n_jobs,
                                        n_attacks=self._n_attacks_ori)
-        # n_attacks is not effective here, just needed for the baseline
         self._n_control = (
             None if self._control is None else self._attack(target=self._control, naive=False, n_jobs=n_jobs,
                                                             n_attacks=self._n_attacks_control)
