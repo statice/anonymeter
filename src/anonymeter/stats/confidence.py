@@ -179,7 +179,7 @@ class EvaluationResults:
         It can be a single number (int) which will apply to all three: main (ori), baseline, and control attack,
         or a tuple (n_attacks_ori, n_attacks_baseline, n_attacks_control) - (int, int, int) which will contain
         different numbers of attacks in case the user wants to perform different number of attacks for each
-        main (ori), baseline and control.
+        main (ori), baseline and control target dataset.
     n_success : int
         Number of successful attacks.
     n_baseline : int

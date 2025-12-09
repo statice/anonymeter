@@ -257,8 +257,7 @@ class KNNInferencePredictor(InferencePredictor):
 
     def __init__(self, data: pd.DataFrame, columns: list[str], target_col: str, n_jobs: int):
         self._nn = MixedTypeKNeighbors(n_jobs=n_jobs, n_neighbors=1).fit(candidates=data[columns])
-        self._data = data
-        self._target_col = target_col
+        self._target_series = data[target_col]
         self._columns = columns
 
     def predict(self, x: pd.DataFrame) -> pd.Series:
@@ -278,4 +277,4 @@ class KNNInferencePredictor(InferencePredictor):
         guesses_idx = self._nn.kneighbors(queries=x[self._columns])
         if isinstance(guesses_idx, tuple):
             raise RuntimeError("guesses_idx cannot be a tuple")
-        return self._data.iloc[guesses_idx.flatten()][self._target_col]
+        return self._target_series.iloc[guesses_idx.flatten()]
