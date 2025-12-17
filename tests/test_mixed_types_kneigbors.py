@@ -13,7 +13,7 @@ rng = np.random.default_rng()
 
 
 def test_mixed_type_kNN():
-    df = get_adult("ori", n_samples=10)
+    df = get_adult("ori", deduplicate_on=None, n_samples=10)
     nn = MixedTypeKNeighbors().fit(df)
     shuffled_idx = rng.integers(10, size=10)
     dist, ids = nn.kneighbors(df.iloc[shuffled_idx], n_neighbors=1, return_distance=True)
@@ -43,7 +43,7 @@ def test_mixed_type_kNN_numerical_scaling():
 
 @pytest.mark.parametrize("n_neighbors, n_queries", [(1, 10), (3, 5)])
 def test_mixed_type_kNN_shape(n_neighbors, n_queries):
-    df = get_adult("ori", n_samples=10)
+    df = get_adult("ori", deduplicate_on=None, n_samples=10)
     nn = MixedTypeKNeighbors(n_neighbors=n_neighbors).fit(df)
     ids = nn.kneighbors(df.head(n_queries))
     assert isinstance(ids, np.ndarray)

@@ -31,16 +31,13 @@ def _run_attack(
 
     if naive:
         guesses = syn.sample(n_attacks)[secret]
-        guesses.index = targets.index
     else:
         # Instantiate the default KNN model if no other model is passed through `inference_model`.
         if inference_model is None:
             inference_model = KNNInferencePredictor(data=syn, columns=aux_cols, target_col=secret, n_jobs=n_jobs)
 
         guesses = inference_model.predict(targets)
-
-    if not guesses.index.equals(targets.index):
-        raise RuntimeError("The predictions indices do not match the target indices. Check your inference model.")
+    guesses = guesses.reindex_like(targets)
 
     return evaluate_inference_guesses(guesses=guesses, secrets=targets[secret], regression=regression).sum(), guesses
 
@@ -77,6 +74,9 @@ def evaluate_inference_guesses(
         Array of boolean values indicating the correcteness of each guess.
 
     """
+    if not guesses.index.equals(secrets.index):
+        raise RuntimeError("The predictions indices do not match the target indices. Check your inference model.")
+
     guesses_np = guesses.to_numpy()
     secrets_np = secrets.to_numpy()
 
@@ -212,16 +212,12 @@ class InferenceEvaluator:
             The evaluated ``InferenceEvaluator`` object.
 
         """
-        # n_attacks is effective here
         self._n_baseline, self._guesses_baseline = self._attack(
             target=self._ori, naive=True, n_jobs=n_jobs, n_attacks=self._n_attacks_baseline
         )
-
-        # n_attacks is not effective here, just needed for the baseline
         self._n_success, self._guesses_success = self._attack(
             target=self._ori, naive=False, n_jobs=n_jobs, n_attacks=self._n_attacks_ori
         )
-        # n_attacks is not effective here, just needed for the baseline
         self._n_control, self._guesses_control = (
             (None, None)
             if self._control is None
@@ -283,7 +279,7 @@ class InferenceEvaluator:
         return results.risk(baseline=baseline)
 
     def risk_for_groups(self, confidence_level: float = 0.95) -> dict[str, tuple[EvaluationResults, PrivacyRisk]]:
-        """Compute the attack risks on a group level, for every unique value of `self._data_groups`.
+        """Compute the inference risk for each group of targets with the same value of the secret attribute.
 
         Parameters
         ----------
@@ -298,7 +294,7 @@ class InferenceEvaluator:
 
         """
         if not self._evaluated:
-            self.evaluate(n_jobs=-2)
+            raise RuntimeError("The inference evaluator wasn't evaluated yet. Please, run `evaluate()` first.")
 
         all_results = {}
 
@@ -307,13 +303,13 @@ class InferenceEvaluator:
             # Get the targets for the current group
             common_indices = data_ori.index.intersection(self._guesses_success.index)
             # Get the guesses for the current group
-            data_ori = data_ori.loc[common_indices]
-            n_attacks_ori = len(data_ori)
+            target_group = data_ori.loc[common_indices]
+            n_attacks_ori = len(target_group)
 
             # Count the number of success attacks
             n_success = evaluate_inference_guesses(
                 guesses=self._guesses_success.loc[common_indices],
-                secrets=data_ori[self._secret],
+                secrets=target_group[self._secret],
                 regression=self._regression,
             ).sum()
 
@@ -336,7 +332,6 @@ class InferenceEvaluator:
                 n_attacks_control = -1
 
             # Recreate the EvaluationResults for the current group
-            assert n_attacks_ori == n_success
             results = EvaluationResults(
                 n_attacks=(n_attacks_ori, self._n_attacks_baseline, n_attacks_control),
                 n_success=n_success,

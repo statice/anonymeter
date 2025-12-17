@@ -33,6 +33,21 @@ def test_evaluate_inference_guesses_classification(guesses, secrets, expected):
 @pytest.mark.parametrize(
     "guesses, secrets, expected",
     [
+        (("a", "b"), ("a", "b"), (True, True)),
+        ((np.nan, "b"), (np.nan, "b"), (True, True))
+    ],
+)
+def test_evaluate_inference_guesses_secrets_indices(guesses, secrets, expected):
+    secrets = pd.Series(secrets).sort_index(ascending=False)
+    with pytest.raises(Exception) as runtime_error:
+        evaluate_inference_guesses(guesses=pd.Series(guesses), secrets=secrets, regression=False)
+    assert runtime_error.type is RuntimeError
+    assert "The predictions indices do not match the target indices" in str(runtime_error.value)
+
+
+@pytest.mark.parametrize(
+    "guesses, secrets, expected",
+    [
         ((1.0, 1.0), (1.0, 1.0), (True, True)),
         ((1.01, 1.0), (1.0, 1.01), (True, True)),
         ((1.0, 1.0), (2.0, 1.01), (False, True)),
@@ -104,8 +119,7 @@ def test_inference_evaluator_rates(
 )
 @pytest.mark.parametrize("secret", ["education", "marital", "capital_gain"])
 def test_inference_evaluator_leaks(aux_cols, secret):
-    ori = get_adult("ori", n_samples=10)
-    ori = ori.drop_duplicates(subset=aux_cols)
+    ori = get_adult("ori", deduplicate_on=aux_cols, n_samples=10)
     evaluator = InferenceEvaluator(
         ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=ori.shape[0]
     )
@@ -117,7 +131,7 @@ def test_inference_evaluator_leaks(aux_cols, secret):
 
 
 def test_evaluator_not_evaluated():
-    df = get_adult("ori", n_samples=10)
+    df = get_adult("ori", deduplicate_on=None, n_samples=10)
     evaluator = InferenceEvaluator(
         ori=df,
         syn=df,
@@ -138,8 +152,7 @@ def test_evaluator_not_evaluated():
 )
 @pytest.mark.parametrize("secret", ["education", "marital"])
 def test_inference_evaluator_group_wise(aux_cols, secret):
-    ori = get_adult("ori", n_samples=10)
-    ori = ori.drop_duplicates(subset=aux_cols)
+    ori = get_adult("ori", deduplicate_on=aux_cols, n_samples=10)
     evaluator = InferenceEvaluator(
         ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=ori.shape[0]
     )
