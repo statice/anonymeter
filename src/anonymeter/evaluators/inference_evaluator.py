@@ -278,7 +278,7 @@ class InferenceEvaluator:
         results = self.results(confidence_level=confidence_level)
         return results.risk(baseline=baseline)
 
-    def risk_for_groups(self, confidence_level: float = 0.95) -> dict[str, tuple[EvaluationResults, PrivacyRisk]]:
+    def risk_for_groups(self, confidence_level: float = 0.95) -> dict[str, EvaluationResults]:
         """Compute the inference risk for each group of targets with the same value of the secret attribute.
 
         Parameters
@@ -298,7 +298,7 @@ class InferenceEvaluator:
 
         all_results = {}
 
-        # For every unique group in `self._data_groups`
+        # For every unique group in `self._secret`
         for group, data_ori in self._ori.groupby(self._secret):
             # Get the targets for the current group
             common_indices = data_ori.index.intersection(self._guesses_success.index)
@@ -332,16 +332,12 @@ class InferenceEvaluator:
                 n_attacks_control = -1
 
             # Recreate the EvaluationResults for the current group
-            results = EvaluationResults(
+            all_results[group] = EvaluationResults(
                 n_attacks=(n_attacks_ori, self._n_attacks_baseline, n_attacks_control),
                 n_success=n_success,
                 n_baseline=self._n_baseline,  # The baseline risk should be the same independent of the group
                 n_control=n_control,
                 confidence_level=confidence_level,
             )
-            # Compute the risk
-            risk = results.risk()
-
-            all_results[group] = (results, risk)
 
         return all_results

@@ -8,7 +8,6 @@ import pandas as pd
 import pytest
 
 from anonymeter.evaluators.inference_evaluator import InferenceEvaluator, evaluate_inference_guesses
-from anonymeter.stats.confidence import EvaluationResults
 
 from tests.fixtures import get_adult
 
@@ -160,7 +159,6 @@ def test_inference_evaluator_group_wise(aux_cols, secret):
 
     group_wise = evaluator.risk_for_groups(confidence_level=0)
 
-    for _, res in group_wise.items():
-        results: EvaluationResults = res[0]
+    for _, results in group_wise.items():
         np.testing.assert_equal(results.attack_rate, (1, 0))
         np.testing.assert_equal(results.control_rate, (1, 0))
