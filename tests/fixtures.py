@@ -39,5 +39,7 @@ def get_adult(which: str, deduplicate_on: Optional[list[str]] = None, n_samples:
     else:
         raise ValueError(f"Invalid value {which} for parameter `which`. Available are: 'ori' or 'syn'.")
 
-    samples = pd.read_csv(os.path.join(TEST_DIR_PATH, "datasets", fname), nrows=n_samples)
-    return samples.drop_duplicates(subset=deduplicate_on) if deduplicate_on else samples
+    samples = pd.read_csv(os.path.join(TEST_DIR_PATH, "datasets", fname))
+    if deduplicate_on:
+        samples = samples.drop_duplicates(subset=deduplicate_on)
+    return samples.iloc[:n_samples]

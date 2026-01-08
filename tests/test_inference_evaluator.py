@@ -38,10 +38,9 @@ def test_evaluate_inference_guesses_classification(guesses, secrets, expected):
 )
 def test_evaluate_inference_guesses_secrets_indices(guesses, secrets, expected):
     secrets = pd.Series(secrets).sort_index(ascending=False)
-    with pytest.raises(Exception) as runtime_error:
+    with pytest.raises(RuntimeError) as runtime_error:
         evaluate_inference_guesses(guesses=pd.Series(guesses), secrets=secrets, regression=False)
-    assert runtime_error.type is RuntimeError
-    assert "The predictions indices do not match the target indices" in str(runtime_error.value)
+        assert "The predictions indices do not match the target indices" in str(runtime_error.value)
 
 
 @pytest.mark.parametrize(
@@ -130,7 +129,7 @@ def test_inference_evaluator_leaks(aux_cols, secret):
 
 
 def test_evaluator_not_evaluated():
-    df = get_adult("ori", deduplicate_on=None, n_samples=10)
+    df = get_adult("ori", n_samples=10)
     evaluator = InferenceEvaluator(
         ori=df,
         syn=df,
@@ -150,7 +149,7 @@ def test_evaluator_not_evaluated():
     ],
 )
 @pytest.mark.parametrize("secret", ["education", "marital"])
-def test_inference_evaluator_group_wise(aux_cols, secret):
+def test_inference_evaluator_group_wise_rates(aux_cols, secret):
     ori = get_adult("ori", deduplicate_on=aux_cols, n_samples=10)
     evaluator = InferenceEvaluator(
         ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=ori.shape[0]
@@ -162,3 +161,32 @@ def test_inference_evaluator_group_wise(aux_cols, secret):
     for _, results in group_wise.items():
         np.testing.assert_equal(results.attack_rate, (1, 0))
         np.testing.assert_equal(results.control_rate, (1, 0))
+
+@pytest.mark.parametrize(
+    "aux_cols",
+    [
+        ["type_employer", "capital_loss", "hr_per_week", "age"],
+        ["education_num", "marital", "capital_loss"],
+    ],
+)
+@pytest.mark.parametrize("secret", ["education", "marital"])
+def test_inference_evaluator_group_wise_risks(aux_cols, secret):
+    ori = get_adult("ori", deduplicate_on=aux_cols, n_samples=10)
+    evaluator = InferenceEvaluator(
+        ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=ori.shape[0]
+    )
+    evaluator.evaluate(n_jobs=1)
+    main_risk = evaluator.risk(confidence_level=0.95)
+
+    group_wise = evaluator.risk_for_groups(confidence_level=0.95)
+
+    sum_risks = 0
+    for _, results in group_wise.items():
+        risk = results.risk().value
+        np.testing.assert_equal(risk, 0)
+
+        sum_risks += risk
+
+    np.testing.assert_allclose(sum_risks, main_risk.value)
+
+#%%
