@@ -180,7 +180,7 @@ def test_inference_evaluator_group_wise_risks(aux_cols, secret):
 
     group_wise = evaluator.risk_for_groups(confidence_level=0.95)
 
-    sum_risks = 0
+    sum_risks = 0.0
     for _, results in group_wise.items():
         risk = results.risk().value
         np.testing.assert_equal(risk, 0)
@@ -188,5 +188,3 @@ def test_inference_evaluator_group_wise_risks(aux_cols, secret):
         sum_risks += risk
 
     np.testing.assert_allclose(sum_risks, main_risk.value)
-
-#%%
