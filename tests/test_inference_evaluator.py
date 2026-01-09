@@ -32,6 +32,20 @@ def test_evaluate_inference_guesses_classification(guesses, secrets, expected):
 @pytest.mark.parametrize(
     "guesses, secrets, expected",
     [
+        (("a", "b"), ("a", "b"), (True, True)),
+        ((np.nan, "b"), (np.nan, "b"), (True, True))
+    ],
+)
+def test_evaluate_inference_guesses_secrets_indices(guesses, secrets, expected):
+    secrets = pd.Series(secrets).sort_index(ascending=False)
+    with pytest.raises(RuntimeError) as runtime_error:
+        evaluate_inference_guesses(guesses=pd.Series(guesses), secrets=secrets, regression=False)
+        assert "The predictions indices do not match the target indices" in str(runtime_error.value)
+
+
+@pytest.mark.parametrize(
+    "guesses, secrets, expected",
+    [
         ((1.0, 1.0), (1.0, 1.0), (True, True)),
         ((1.01, 1.0), (1.0, 1.01), (True, True)),
         ((1.0, 1.0), (2.0, 1.01), (False, True)),
@@ -103,8 +117,10 @@ def test_inference_evaluator_rates(
 )
 @pytest.mark.parametrize("secret", ["education", "marital", "capital_gain"])
 def test_inference_evaluator_leaks(aux_cols, secret):
-    ori = get_adult("ori", n_samples=10)
-    evaluator = InferenceEvaluator(ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=10)
+    ori = get_adult("ori", deduplicate_on=aux_cols, n_samples=10)
+    evaluator = InferenceEvaluator(
+        ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=ori.shape[0]
+    )
     evaluator.evaluate(n_jobs=1)
     results = evaluator.results(confidence_level=0)
 
@@ -123,3 +139,52 @@ def test_evaluator_not_evaluated():
     )
     with pytest.raises(RuntimeError):
         evaluator.risk()
+
+
+@pytest.mark.parametrize(
+    "aux_cols",
+    [
+        ["type_employer", "capital_loss", "hr_per_week", "age"],
+        ["education_num", "marital", "capital_loss"],
+    ],
+)
+@pytest.mark.parametrize("secret", ["education", "marital"])
+def test_inference_evaluator_group_wise_rates(aux_cols, secret):
+    ori = get_adult("ori", deduplicate_on=aux_cols, n_samples=10)
+    evaluator = InferenceEvaluator(
+        ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=ori.shape[0]
+    )
+    evaluator.evaluate(n_jobs=1)
+
+    group_wise = evaluator.risk_for_groups(confidence_level=0)
+
+    for _, results in group_wise.items():
+        np.testing.assert_equal(results.attack_rate, (1, 0))
+        np.testing.assert_equal(results.control_rate, (1, 0))
+
+@pytest.mark.parametrize(
+    "aux_cols",
+    [
+        ["type_employer", "capital_loss", "hr_per_week", "age"],
+        ["education_num", "marital", "capital_loss"],
+    ],
+)
+@pytest.mark.parametrize("secret", ["education", "marital"])
+def test_inference_evaluator_group_wise_risks(aux_cols, secret):
+    ori = get_adult("ori", deduplicate_on=aux_cols, n_samples=10)
+    evaluator = InferenceEvaluator(
+        ori=ori, syn=ori, control=ori, aux_cols=aux_cols, secret=secret, n_attacks=ori.shape[0]
+    )
+    evaluator.evaluate(n_jobs=1)
+    main_risk = evaluator.risk(confidence_level=0.95)
+
+    group_wise = evaluator.risk_for_groups(confidence_level=0.95)
+
+    sum_risks = 0.0
+    for _, results in group_wise.items():
+        risk = results.risk().value
+        np.testing.assert_equal(risk, 0)
+
+        sum_risks += risk
+
+    np.testing.assert_allclose(sum_risks, main_risk.value)

@@ -150,7 +150,7 @@ def test_singling_out_query_generator() -> None:
 @pytest.mark.parametrize("confidence_level", [0.5, 0.68, 0.95, 0.99])
 @pytest.mark.parametrize("mode", ["univariate", "multivariate"])
 def test_singling_out_risk_estimate(confidence_level: float, mode: str) -> None:
-    ori = get_adult("ori", 10)
+    ori = get_adult("ori", n_samples=10)
     soe = SinglingOutEvaluator(ori=ori, syn=ori, n_attacks=5)
     soe.evaluate(mode=mode)
     _, ci = soe.risk(confidence_level=confidence_level)
@@ -176,7 +176,7 @@ def test_probability_integral(n: int, w_min: float, w_max: float) -> None:
 
 @pytest.mark.parametrize("max_attempts", [1, 2, 3])
 def test_so_evaluator_max_attempts(max_attempts: int) -> None:
-    ori = get_adult("ori", 10)
+    ori = get_adult("ori", n_samples=10)
     soe = SinglingOutEvaluator(ori=ori, syn=ori, n_attacks=10, max_attempts=max_attempts)
     soe.evaluate(mode="multivariate")
 

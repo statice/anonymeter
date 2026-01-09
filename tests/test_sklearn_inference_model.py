@@ -25,7 +25,7 @@ from tests.fixtures import get_adult
 )
 @pytest.mark.parametrize("secret", ["capital_gain", "capital_loss"])
 def test_inference_evaluator_custom_model_regressor(aux_cols, secret):
-    ori = get_adult("ori", n_samples=10)
+    ori = get_adult("ori", deduplicate_on=aux_cols, n_samples=10)
 
     # Inference model prep
     categorical_cols = ori[aux_cols].select_dtypes(include=["object"]).columns
