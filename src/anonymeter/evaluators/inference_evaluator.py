@@ -324,7 +324,7 @@ class InferenceEvaluator:
                 # Count the number of success control attacks
                 n_control = evaluate_inference_guesses(
                     guesses=self._guesses_control.loc[common_indices],
-                    secrets=data_control[self._secret],
+                    secrets=data_control[self._secret].loc[common_indices],
                     regression=self._regression,
                 ).sum()
             else:
