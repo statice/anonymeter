@@ -29,6 +29,20 @@ learns from the *utility* of the synthetic data, and what is instead indication 
 The "baseline attack" instead functions as a sanity check. The "main attack" attack should outperform random
 guessing in order for the results to be trusted.
 
+For the inference attack, in addition to the standard evaluation procedure described above, we offer two extensions:
+
+- **Custom inference models**:  
+  Instead of relying on the default kNN-based attack, we allow the use of arbitrary machine learning models (e.g., `DecisionTreeClassifier`).  
+  This enables scaling inference attacks to the full dataset, which is not feasible with kNN due to computational limitations.
+  Custom models must follow the `InferencePredictor` protocol, which defines a `predict(x)`.
+
+- **Group-wise risk estimation**:  
+  Privacy risks can be computed separately for different groups within a target (secret) column (e.g., `income` ∈ {`>50K`, `<=50K`}).  
+  This allows analyzing how privacy risk varies across subpopulations and enables further analyses such as fairness assessment.
+
+We refer to the notebook `attribute_inference_custom_model_and_group_wise_risk.ipynb` under `notebooks/` for more details.
+
+
 For more details, a throughout
 description of the framework and the attack algorithms can be found in the paper
 [A Unified Framework for Quantifying Privacy Risk in Synthetic Data](https://petsymposium.org/popets/2023/popets-2023-0055.php), accepted at the 23rd Privacy Enhancing Technologies Symposium ([PETS 2023](https://petsymposium.org/cfp23.php)).
@@ -93,9 +107,9 @@ Another parameter common to all evaluators is the number of target records to at
 
 ```python
 evaluator = *Evaluator(ori: pd.DataFrame,
-                       syn: pd.DataFrame,
-                       control: pd.DataFrame,
-                       n_attacks: int)
+syn: pd.DataFrame,
+control: pd.DataFrame,
+n_attacks: int)
 ```
 
 Once instantiated the evaluation pipeline is executed when calling the `evaluate`, and the resulting estimate of the risk can be accessed using the `risk()` method.
