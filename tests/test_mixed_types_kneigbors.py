@@ -89,4 +89,4 @@ def test_knn_inference_predictor_prediction_index_alignment():
 
     guesses = predictor.predict(queries)
 
-    assert list(guesses.index) == list(queries.index)
+    pd.testing.assert_index_equal(guesses.index, queries.index)
