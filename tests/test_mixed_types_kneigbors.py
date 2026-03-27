@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from anonymeter.neighbors.mixed_types_kneighbors import MixedTypeKNeighbors, gower_distance
+from anonymeter.neighbors.mixed_types_kneighbors import KNNInferencePredictor, MixedTypeKNeighbors, gower_distance
 
 from tests.fixtures import get_adult
 
@@ -79,3 +79,14 @@ def test_gower_distance_numerical():
     r0, r1 = rng.random(size=10), rng.random(size=10)
     dist = gower_distance(r0=r0, r1=r1, cat_cols_index=10)
     np.testing.assert_almost_equal(dist, np.sum(np.abs(r0 - r1)))
+
+
+def test_knn_inference_predictor_prediction_index_alignment():
+    df = get_adult("ori", n_samples=10)
+    aux_cols = ["age", "education", "sex"]
+    predictor = KNNInferencePredictor(data=df, columns=aux_cols, target_col="income", n_jobs=1)
+    queries = df[aux_cols]
+
+    guesses = predictor.predict(queries)
+
+    pd.testing.assert_index_equal(guesses.index, queries.index)

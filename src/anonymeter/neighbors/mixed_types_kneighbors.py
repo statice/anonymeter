@@ -277,4 +277,7 @@ class KNNInferencePredictor(InferencePredictor):
         guesses_idx = self._nn.kneighbors(queries=x[self._columns])
         if isinstance(guesses_idx, tuple):
             raise RuntimeError("guesses_idx cannot be a tuple")
-        return self._target_series.iloc[guesses_idx.flatten()]
+
+        guesses = self._target_series.iloc[guesses_idx.flatten()]
+        guesses.index = x.index
+        return guesses
