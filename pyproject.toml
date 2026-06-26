@@ -28,6 +28,7 @@ dependencies = [
     "joblib~=1.2",
     "numba~=0.59",
     "polars>=1.8",
+    "pyarrow>=10.0,<22", # 22+ dropped Python 3.9 support
 ]
 
 [project.optional-dependencies]
