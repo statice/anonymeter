@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-23
+
+### Added
+
+- Custom inference model support: an `InferencePredictor` protocol and class wrappers so the `InferenceEvaluator` can run with a user-supplied ML model instead of only the built-in KNN predictor (#51)
+- Group-wise inference risk evaluation, computing risks per group within the target column (#53, #54)
+
+### Changed
+
+- CI updated to support Python 3.13, and fixed for older pandas versions (#57)
+- Package now publishes to PyPI automatically via a GitHub Actions workflow using OIDC trusted publishing (#59)
+
+### Fixed
+
+- Explicit `pyarrow` dependency added (#60)
+- Stray quote removed from the README
+
 ## [1.0.0] - 2024-02-02
 
 ### Changed
