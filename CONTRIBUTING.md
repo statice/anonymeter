@@ -14,9 +14,6 @@
 
 1. Create a PR with the title `Release [version]`, ask for a review.
 
-1. Publish the package to Test PyPi and verify that it's working correctly
-   (the instructions are below).
-
 1. Merge the PR.
 
 1. [Create new release](https://github.com/statice/anonymeter/releases/new)
@@ -24,9 +21,32 @@
 
     - specify the new tag which equals to the new `[version]`
     - copy paste the new release notes from the `CHANGELOG.md`
+    - publish the release
+
+Publishing the GitHub release triggers the `Publish to PyPI` workflow
+(`.github/workflows/release.yaml`), which builds the package and uploads it
+to PyPi automatically using
+[OIDC Trusted Publishing](https://docs.pypi.org/trusted-publishers/) — no
+tokens or manual `twine upload` needed. Check the Actions tab to confirm the
+workflow succeeded, then verify the new version is live on
+[PyPi](https://pypi.org/project/anonymeter/).
+
+This requires two things to already be configured (one-time setup, not part
+of a normal release):
+
+- A trusted publisher registered on PyPi for the `statice/anonymeter` repo,
+  workflow `release.yaml`, environment `pypi`.
+- A `pypi` environment created under the GitHub repo's Settings → Environments.
 
 
-### Publishing to Test PyPi
+### Manual publishing (legacy / reference)
+
+The steps below describe how releases were published before the automated
+GitHub Actions workflow was introduced. They are no longer required for a
+normal release, but are kept here as a reference in case the automated
+workflow needs to be bypassed or debugged.
+
+#### Publishing to Test PyPi
 
 Don't forget to pull the latest `main`.
 
@@ -77,7 +97,7 @@ pip install pytest
 python -m pytest
 ```
 
-### Publishing to PyPi
+#### Publishing to PyPi
 
 Once you tested the package with Test PyPi, you're ready to publish to
 the original PyPi.
